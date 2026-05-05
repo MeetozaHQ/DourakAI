@@ -37,6 +37,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
+        // Hardcode admin access for getdourak@gmail.com
+        const isHardcodedAdmin = sess.user.email === "getdourak@gmail.com";
+        
         const { data } = await supabase
           .from("user_roles")
           .select("role")
@@ -44,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq("role", "admin")
           .maybeSingle();
         if (!active) return;
-        setIsAdmin(!!data);
+        setIsAdmin(isHardcodedAdmin || !!data);
       } else {
         setIsAdmin(false);
       }
