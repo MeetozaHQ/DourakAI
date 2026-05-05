@@ -12,7 +12,7 @@ import { Clock, Users, CheckCircle2, Activity, LogOut, RefreshCw, Copy, Download
 import { toast } from "sonner";
 import { hasFeature, PlanId, planForFeature, PLANS } from "@/lib/plans";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
 
 type Shop = { id: string; name: string; slug: string; plan: string; brand_color: string | null; logo_url: string | null; description: string | null; daily_limit: number | null };
@@ -1648,8 +1648,7 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
         e.queues?.name || "-"
       ]);
 
-      // @ts-expect-error - jspdf-autotable adds autoTable to jsPDF instance
-      doc.autoTable({
+      autoTable(doc, {
         startY: 30,
         head: [['#', 'Customer', 'Status', 'Date', 'Served At', 'Queue']],
         body: tableData,
@@ -1694,7 +1693,7 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
               type="date" 
               value={dateRange.start} 
               onChange={e => setDateRange(prev => ({...prev, start: e.target.value}))}
-              className="bg-surface-muted border-surface rounded-xl text-sm" 
+              className="bg-surface-muted border-surface rounded-xl text-sm text-surface-fg" 
             />
           </div>
           <div className="space-y-1.5">
@@ -1705,7 +1704,7 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
               type="date" 
               value={dateRange.end} 
               onChange={e => setDateRange(prev => ({...prev, end: e.target.value}))}
-              className="bg-surface-muted border-surface rounded-xl text-sm" 
+              className="bg-surface-muted border-surface rounded-xl text-sm text-surface-fg" 
             />
           </div>
           <div className="space-y-1.5">
