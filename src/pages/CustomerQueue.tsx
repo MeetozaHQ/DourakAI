@@ -78,6 +78,26 @@ const CustomerQueue = () => {
     void loadShop();
   }, [slug, queueSlug]);
 
+  const [showCustIntro, setShowCustIntro] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [lastEntryId, setLastEntryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("dourak_cust_intro_seen");
+    if (!seen && shop && !entry) {
+      setShowCustIntro(true);
+    }
+  }, [shop, entry]);
+
+  const finishCustIntro = () => {
+    localStorage.setItem("dourak_cust_intro_seen", "true");
+    setShowCustIntro(false);
+  };
+
+  useEffect(() => {
+    if (entry?.id) setLastEntryId(entry.id);
+  }, [entry?.id]);
+
   useEffect(() => {
     if (loadError !== TEMPORARY_LOAD_ERROR) return;
     const retry = setTimeout(() => void loadShop(), 5000);
@@ -187,7 +207,18 @@ const CustomerQueue = () => {
       if (data.entry) {
         setEntry(data.entry);
       } else {
-        // Our entry was removed (done/left) — clear it
+        // Our entry was removed. Was it served (done) or just left?
+        // We check the specific entry status directly to be sure
+        const { data: check } = await supabase
+          .from("queue_entries")
+          .select("status")
+          .eq("id", currentEntry.id)
+          .maybeSingle();
+        
+        if (check?.status === "done") {
+          setShowThankYou(true);
+        }
+        
         setEntry(null);
         localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
       }
@@ -259,6 +290,84 @@ const CustomerQueue = () => {
 
   return (
     <div className="hero-bg min-h-screen flex flex-col items-center justify-center px-6 py-12" dir="rtl">
+      {/* Customer Intro Overlay */}
+      {showCustIntro && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="w-full max-w-md bg-white border border-surface rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-center">
+            <div className="w-20 h-20 bg-primary/10 rounded-3xl mx-auto flex items-center justify-center mb-6">
+              <span className="text-4xl text-primary animate-bounce">📱</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">وفّر وقتك</h2>
+            <p className="text-slate-600 mb-8 font-medium">اعرف دورك وسيب المكان براحتك</p>
+
+            <div className="space-y-4 mb-8">
+              {[
+                { icon: "👥", text: "شوف كام واحد قبلك" },
+                { icon: "⏱️", text: "اعرف وقت انتظارك" },
+                { icon: "🔔", text: "هننبهك لما دورك يقرب" },
+              ].map((b, i) => (
+                <div key={i} className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl text-right">
+                  <span className="text-xl">{b.icon}</span>
+                  <span className="text-slate-700 font-bold">{b.text}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button onClick={finishCustIntro} className="w-full h-14 bg-gradient-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-elegant">
+              فهمت 👍
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Thank You Overlay */}
+      {showThankYou && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="w-full max-w-md bg-white border border-surface rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden text-center">
+            <div className="w-24 h-24 bg-success/10 rounded-full mx-auto flex items-center justify-center mb-6">
+              <CheckCircle2 className="w-12 h-12 text-success" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">شكرًا لاستخدام دَوْرَك 🙏</h2>
+            <p className="text-slate-600 mb-4 font-medium">نتمنى لك تجربة مريحة وبدون انتظار دائمًا.</p>
+            
+            <div className="h-px bg-slate-100 my-6" />
+            
+            <p className="text-sm font-bold text-slate-500 mb-4">ساعدنا نوصل الفكرة لغيرك 👇</p>
+            
+            <div className="grid grid-cols-1 gap-3 mb-8">
+              <Button 
+                onClick={() => {
+                  const text = `وفّر وقتك وما تستناش في الطابور 🚀\nدَوْرَك نظام ذكي يخليك تحجز دورك وتعرف وقتك بدون زحمة.\nجربه من هنا:\ndourak.online`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                }}
+                className="h-12 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl gap-2 font-bold"
+              >
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" className="w-5 h-5 invert" alt="" />
+                مشاركة عبر واتساب
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText("https://dourak.online");
+                  toast.success("تم نسخ الرابط");
+                }}
+                className="h-12 border-slate-200 text-slate-700 rounded-xl gap-2 font-bold"
+              >
+                نسخ رابط دَوْرَك
+              </Button>
+            </div>
+
+            <Button 
+              variant="link" 
+              onClick={() => setShowThankYou(false)}
+              className="text-primary font-bold"
+            >
+              استخدم دَوْرَك مرة أخرى
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-6 animate-fade-in">
           <Logo size="lg" />
@@ -330,9 +439,9 @@ const CustomerQueue = () => {
               </div>
             </div>
 
-            <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 mb-4 text-center text-sm">
-              <Bell className="w-4 h-4 inline ml-2 text-accent" />
-              هنبلّغك بإشعار واهتزاز لما يجي دورك. تقدر تخرج تتمشى!
+            <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 mb-4 text-center text-sm text-foreground/80">
+              <span className="block font-bold mb-1">📲 تقدر تسيب المكان وترجع لما دورك يقرب</span>
+              <span className="text-xs opacity-70">هنبلّغك بإشعار واهتزاز لما يجي دورك.</span>
             </div>
 
             <Button onClick={leave} variant="ghost" className="w-full text-foreground/60 hover:bg-destructive/10 hover:text-destructive">

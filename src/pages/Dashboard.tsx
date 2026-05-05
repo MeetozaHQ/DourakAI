@@ -160,6 +160,21 @@ const Dashboard = () => {
     await loadEntries();
   };
 
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("dourak_onboarding_seen");
+    if (!seen && shop) {
+      setShowOnboarding(true);
+    }
+  }, [shop]);
+
+  const finishOnboarding = () => {
+    localStorage.setItem("dourak_onboarding_seen", "true");
+    setShowOnboarding(false);
+  };
+
   if (loading || (!shop && user)) {
     return <div className="bg-surface min-h-screen flex items-center justify-center"><div className="text-surface-muted">جارٍ التحميل...</div></div>;
   }
@@ -238,6 +253,87 @@ const Dashboard = () => {
 
   return (
     <div className="bg-surface min-h-screen" dir="rtl">
+      {/* Onboarding Overlay */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="w-full max-w-md bg-surface-card border border-surface rounded-[2rem] p-8 shadow-2xl relative overflow-hidden">
+            {/* Steps indicator */}
+            <div className="flex justify-center gap-2 mb-8">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    onboardingStep === s ? "w-8 bg-primary" : "w-2 bg-surface-muted"
+                  }`}
+                />
+              ))}
+            </div>
+
+            {onboardingStep === 1 && (
+              <div className="text-center space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="w-20 h-20 bg-gradient-primary rounded-3xl mx-auto flex items-center justify-center shadow-elegant">
+                  <Logo size="lg" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black text-surface-fg">أهلاً بك في دَوْرَك 👋</h2>
+                  <p className="text-surface-muted">خلّي الزباين تاخد دورها بدون زحمة</p>
+                </div>
+                <Button onClick={() => setOnboardingStep(2)} className="w-full h-14 bg-gradient-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-elegant">
+                  ابدأ الآن
+                </Button>
+              </div>
+            )}
+
+            {onboardingStep === 2 && (
+              <div className="space-y-6 animate-in slide-in-from-left-4 duration-500">
+                <h2 className="text-2xl font-black text-surface-fg text-center mb-8">إزاي دورك بيشتغل؟</h2>
+                <div className="space-y-4">
+                  {[
+                    { icon: "📱", text: "الزبون يمسح QR" },
+                    { icon: "🔢", text: "يدخل رقم الإيصال" },
+                    { icon: "⏳", text: "يعرف دوره ويستنى برا" },
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-center gap-4 p-4 bg-surface-muted rounded-2xl border border-surface">
+                      <span className="text-2xl">{step.icon}</span>
+                      <span className="font-bold text-surface-fg">{step.text}</span>
+                    </div>
+                  ))}
+                </div>
+                <Button onClick={() => setOnboardingStep(3)} className="w-full h-14 bg-gradient-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-elegant mt-4">
+                  تمام 👍 خلّيني أبدأ
+                </Button>
+              </div>
+            )}
+
+            {onboardingStep === 3 && (
+              <div className="text-center space-y-6 animate-in slide-in-from-left-4 duration-500">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-black text-surface-fg">أنت جاهز! 🚀</h2>
+                  <p className="text-surface-muted">اطبع الكود وحطه عند الكاشير</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-2xl border border-surface inline-block mx-auto">
+                  <QRCodeSVG value={customerUrl} size={150} fgColor="#6366f1" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" onClick={() => { navigator.clipboard.writeText(customerUrl); toast.success("تم نسخ الرابط"); }} className="rounded-xl border-surface h-12 gap-2">
+                    <Copy className="w-4 h-4" /> نسخ الرابط
+                  </Button>
+                  <Button variant="outline" onClick={() => downloadQRPng(4)} className="rounded-xl border-surface h-12 gap-2">
+                    <Download className="w-4 h-4" /> تحميل QR
+                  </Button>
+                </div>
+
+                <Button onClick={finishOnboarding} className="w-full h-14 bg-success text-success-foreground rounded-2xl font-bold text-lg shadow-elegant">
+                  افتح لوحة التحكم
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-surface-card border-b border-surface px-6 py-4 sticky top-0 z-30">
         <div className="container mx-auto flex items-center justify-between max-w-7xl gap-3">
