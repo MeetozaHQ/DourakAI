@@ -189,14 +189,10 @@ app.post("/api/pay/webhook", async (req, res) => {
   }
 });
 
-app.get("/api/customer/join", (req, res) => {
-  res.status(405).json({ error: "يجب استخدام POST لهذه الخدمة. يبدو أن متصفحك أو الشبكة حولت الطلب إلى GET." });
-});
-
-app.post("/api/customer/join", async (req, res) => {
+app.post("/api/queue_action", async (req, res) => {
   try {
     const { action, slug, queueSlug, entryId, notifyToken, name } = req.body;
-    console.log(`[QueueAPI] ${action} path: /q/${slug}${queueSlug ? `/${queueSlug}` : ""}`);
+    console.log(`[QueueAPI] Action: ${action}, Slug: ${slug}`);
 
     if (!slug) return res.status(400).json({ error: "Missing slug" });
 
