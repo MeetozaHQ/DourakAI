@@ -25,7 +25,13 @@ const Dashboard = () => {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [queue, setQueue] = useState<Queue | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [stats, setStats] = useState({ avgWait: 0, waiting: 0, served: 0, total: 0 });
+  const [stats, setStats] = useState({ 
+    avgWait: 0, 
+    waiting: 0, 
+    served: 0, 
+    total: 0,
+    peakHours: [] as { hour: number; count: number }[] 
+  });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const currentLimit = shop?.daily_limit ?? (shop?.plan === "free" ? 10 : Infinity);
@@ -75,9 +81,18 @@ const Dashboard = () => {
           .eq("id", user!.id)
           .maybeSingle();
 
+        const slug = profile?.shop_name 
+          ? profile.shop_name.toLowerCase().replace(/\s+/g, '-') + '-' + Math.random().toString(36).substring(2, 6)
+          : `shop-${Math.random().toString(36).substring(2, 10)}`;
+
         const { data: created, error: createErr } = await supabase
           .from("shops")
-          .insert({ owner_id: user!.id, name: profile?.shop_name || "محلي" })
+          .insert({ 
+            owner_id: user!.id, 
+            name: profile?.shop_name || "محلي",
+            slug: slug,
+            active: true
+          })
           .select()
           .maybeSingle();
 
@@ -137,12 +152,38 @@ const Dashboard = () => {
       .order("number", { ascending: true });
     const list = (data ?? []) as Entry[];
     setEntries(list);
-    const served = list.filter(e => e.status === "done");
+    
+    // Stats calculation
+    const served = list.filter(e => e.status === "done" && e.served_at);
     const waiting = list.filter(e => e.status === "waiting");
+    
+    // Actual average wait: time between joining and being served
     const avg = served.length
-      ? Math.round(served.reduce((a, e) => a + (e.served_at ? (new Date(e.served_at).getTime() - new Date(e.joined_at).getTime()) / 60000 : 0), 0) / served.length)
-      : 7;
-    setStats({ avgWait: avg, waiting: waiting.length, served: served.length, total: list.length });
+      ? Math.round(served.reduce((a, e) => {
+          const joined = new Date(e.joined_at).getTime();
+          const served = new Date(e.served_at!).getTime();
+          return a + (served - joined) / 60000;
+        }, 0) / served.length)
+      : (stats.avgWait || 0);
+
+    // Peak times: grouping by hour
+    const hourCounts: Record<number, number> = {};
+    list.forEach(e => {
+      const hour = new Date(e.joined_at).getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    const peak = Object.entries(hourCounts)
+      .map(([h, c]) => ({ hour: parseInt(h), count: c }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    setStats({ 
+      avgWait: avg || 0, 
+      waiting: waiting.length, 
+      served: served.length, 
+      total: list.length,
+      peakHours: peak
+    });
   };
 
   const callNext = async () => {
@@ -512,6 +553,40 @@ const Dashboard = () => {
                   <div className="text-xs text-surface-muted mt-1">{s.label}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Peak Times & Deep Analysis */}
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-5 h-5 text-warning" />
+                  <h3 className="font-black text-surface-fg">أوقات الذروة (اليوم)</h3>
+                </div>
+                {stats.peakHours.length > 0 ? (
+                  <div className="space-y-3">
+                    {stats.peakHours.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-surface-muted rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-full bg-warning/10 text-warning flex items-center justify-center font-bold text-xs">
+                            {i + 1}
+                          </span>
+                          <span className="font-bold text-surface-fg">الساعة {p.hour}:00</span>
+                        </div>
+                        <span className="text-sm font-black text-surface-muted">{p.count} زبون</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-surface-muted text-sm italic">لا توجد بيانات كافية حالياً</div>
+                )}
+              </div>
+              <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface flex flex-col justify-center">
+                 <div className="text-center">
+                   <div className="text-surface-muted text-xs font-bold mb-2 uppercase tracking-widest">نبض المحل</div>
+                   <div className="text-5xl font-black text-primary mb-2">{stats.waiting > 0 ? "نشط 🔥" : "هادئ 🌿"}</div>
+                   <p className="text-sm text-surface-muted font-medium">بناءً على طلبات الانضمام الحالية</p>
+                 </div>
+              </div>
             </div>
 
             {/* Queues management (طوابيرك) */}

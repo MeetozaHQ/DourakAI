@@ -83,7 +83,7 @@ const Privacy = () => {
               <h2 className="text-2xl font-bold mb-3">8. التواصل</h2>
               <p>
                 لأي استفسار حول سياسة الخصوصية، يمكنك التواصل معنا عبر البريد:
-                support@dourak.app
+                support@dourak.online
               </p>
             </div>
           </div>
