@@ -13,6 +13,11 @@ const PORT = 3000;
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log(`[Request] ${req.method} ${req.url}`);
+  next();
+});
+
 // Supabase Admin Client
 const supabaseAdmin = createClient(
   process.env.VITE_SUPABASE_URL || "",
@@ -184,7 +189,11 @@ app.post("/api/pay/webhook", async (req, res) => {
   }
 });
 
-app.post("/api/queue", async (req, res) => {
+app.get("/api/customer/join", (req, res) => {
+  res.status(405).json({ error: "يجب استخدام POST لهذه الخدمة. يبدو أن متصفحك أو الشبكة حولت الطلب إلى GET." });
+});
+
+app.post("/api/customer/join", async (req, res) => {
   try {
     const { action, slug, queueSlug, entryId, notifyToken, name } = req.body;
     console.log(`[QueueAPI] ${action} path: /q/${slug}${queueSlug ? `/${queueSlug}` : ""}`);

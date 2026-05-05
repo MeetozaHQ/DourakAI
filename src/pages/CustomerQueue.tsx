@@ -221,7 +221,7 @@ const CustomerQueue = () => {
     try {
       try { if (typeof Notification !== "undefined" && Notification.permission === "default") await Notification.requestPermission(); } catch (e) { console.debug(e); }
       
-      const response = await fetch("/api/queue", {
+      const response = await fetch("/api/customer/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -275,7 +275,7 @@ const CustomerQueue = () => {
   const leave = async () => {
     if (!entry) return;
     try {
-      await fetch("/api/queue", {
+      const res = await fetch("/api/customer/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
