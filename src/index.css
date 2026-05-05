@@ -1,12 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* دَوْرَك — Design System
-   Dark luxe purple, glassmorphism, RTL-first.
-   All colors MUST be HSL.
-*/
-
+/* دَوْرَك — Design System */
 @layer base {
   :root {
     /* Dark luxury purple theme */
@@ -192,5 +189,25 @@
   .text-surface-fg { color: hsl(var(--surface-foreground)); }
   .text-surface-muted { color: hsl(var(--surface-muted-foreground)); }
   .border-surface { border-color: hsl(var(--surface-border)); }
+}
+
+@keyframes float {
+  0% { transform: translateY(100vh) rotate(0deg); }
+  100% { transform: translateY(-100px) rotate(360deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(252 90% 67% / 0.4); }
+  50% { box-shadow: 0 0 0 20px hsl(252 90% 67% / 0); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
