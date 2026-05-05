@@ -14,6 +14,7 @@ import { hasFeature, PlanId, planForFeature, PLANS } from "@/lib/plans";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Papa from "papaparse";
+import html2canvas from "html2canvas";
 
 type Shop = { id: string; name: string; slug: string; plan: string; brand_color: string | null; logo_url: string | null; description: string | null; daily_limit: number | null };
 type Queue = { id: string; name: string; current_serving: number; slug: string; branch_id: string | null };
@@ -1570,7 +1571,10 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
     setBranches((b ?? []) as Branch[]);
   };
 
-  useEffect(() => { void loadMetaData(); }, [shop.id, unlocked]);
+  useEffect(() => { 
+    void loadMetaData(); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shop.id, unlocked]);
 
   const fetchEntries = async () => {
     let query = supabase
@@ -1630,33 +1634,75 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
       const data = await fetchEntries();
       if (data.length === 0) { toast.info("لا توجد بيانات للفترة المحددة"); return; }
 
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      
-      // Basic styling for RTL (Simplified since jspdf default fonts don't support Arabic well without extra files)
-      // We'll use latin characters for titles or try a basic approach
-      doc.setFontSize(20);
-      doc.text(`Queue Report: ${shop.name}`, 105, 15, { align: "center" });
-      doc.setFontSize(10);
-      doc.text(`From: ${dateRange.start} To: ${dateRange.end}`, 105, 22, { align: "center" });
+      // Create a temporary element for capturing to support Arabic/RTL correctly via html2canvas
+      const element = document.createElement("div");
+      element.style.position = "fixed";
+      element.style.left = "-9999px";
+      element.style.top = "0";
+      element.style.width = "800px";
+      element.style.padding = "40px";
+      element.style.backgroundColor = "white";
+      element.style.color = "black";
+      element.style.direction = "rtl";
+      element.style.fontFamily = "'Cairo', sans-serif";
 
-      const tableData = data.map(e => [
-        e.number.toString(),
-        e.customer_name || "Guest",
-        e.status,
-        new Date(e.joined_at).toLocaleDateString(),
-        e.served_at ? new Date(e.served_at).toLocaleTimeString() : "-",
-        e.queues?.name || "-"
-      ]);
+      element.innerHTML = `
+        <div style="padding: 20px;">
+          <h1 style="text-align:center; font-size: 28px; margin-bottom: 10px; color: #1e1b4b;">تقرير الطابور: ${shop.name}</h1>
+          <p style="text-align:center; font-size: 16px; color: #64748b; margin-bottom: 30px;">الفترة من ${dateRange.start} إلى ${dateRange.end}</p>
+          
+          <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+            <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+              <div style="font-size: 12px; color: #64748b;">إجمالي الزبائن</div>
+              <div style="font-size: 24px; font-weight: bold; color: #6366f1;">${data.length}</div>
+            </div>
+          </div>
 
-      autoTable(doc, {
-        startY: 30,
-        head: [['#', 'Customer', 'Status', 'Date', 'Served At', 'Queue']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [99, 102, 241] }, // Indigo primary color
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background-color: #6366f1; color: white;">
+                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">#</th>
+                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">الاسم</th>
+                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">الحالة</th>
+                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">تاريخ الدخول</th>
+                <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">الطابور</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map((e, i) => `
+                <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${e.number}</td>
+                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.customer_name || "زبون"}</td>
+                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.status === 'done' ? 'مكتمل' : e.status === 'serving' ? 'الآن' : 'ينتظر'}</td>
+                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${new Date(e.joined_at).toLocaleString('ar-EG')}</td>
+                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.queues?.name || "—"}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top: 40px; text-align: center; font-size: 10px; color: #94a3b8;">
+            تم استخراج هذا التقرير عبر منصة دَوْرَك Dourak
+          </div>
+        </div>
+      `;
+      document.body.appendChild(element);
+
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "white"
       });
+      
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`report-${shop.slug}-${dateRange.start}.pdf`);
 
-      doc.save(`report-${shop.slug}-${dateRange.start}.pdf`);
+      document.body.removeChild(element);
     } catch (err) {
       console.error(err);
       toast.error("فشل تصدير PDF");
@@ -1693,7 +1739,7 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
               type="date" 
               value={dateRange.start} 
               onChange={e => setDateRange(prev => ({...prev, start: e.target.value}))}
-              className="bg-surface-muted border-surface rounded-xl text-sm text-surface-fg" 
+              className="bg-surface-card border-2 border-surface text-surface-fg rounded-xl text-sm font-bold h-11 [color-scheme:light]" 
             />
           </div>
           <div className="space-y-1.5">
@@ -1704,7 +1750,7 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
               type="date" 
               value={dateRange.end} 
               onChange={e => setDateRange(prev => ({...prev, end: e.target.value}))}
-              className="bg-surface-muted border-surface rounded-xl text-sm text-surface-fg" 
+              className="bg-surface-card border-2 border-surface text-surface-fg rounded-xl text-sm font-bold h-11 [color-scheme:light]" 
             />
           </div>
           <div className="space-y-1.5">
