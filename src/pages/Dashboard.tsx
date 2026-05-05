@@ -55,29 +55,49 @@ const Dashboard = () => {
 
   const loadData = async () => {
     try {
-      // Use list+order instead of maybeSingle to tolerate accounts with multiple shops
+      // 1. Try to fetch existing shop
       const { data: shopsList, error: shopsErr } = await supabase
         .from("shops")
         .select("*")
         .eq("owner_id", user!.id)
         .order("created_at", { ascending: true })
         .limit(1);
+      
       if (shopsErr) throw shopsErr;
+      
       let s = (shopsList ?? [])[0] ?? null;
+      
+      // 2. If no shop exists, create one
       if (!s) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("shop_name")
           .eq("id", user!.id)
           .maybeSingle();
+
         const { data: created, error: createErr } = await supabase
           .from("shops")
           .insert({ owner_id: user!.id, name: profile?.shop_name || "محلي" })
           .select()
-          .single();
-        if (createErr) throw createErr;
-        s = created;
+          .maybeSingle();
+
+        // If insert fails due to unique constraint, try fetching one more time
+        if (createErr) {
+          if (createErr.code === '23505') { // Unique constraint violation
+            const { data: retryList } = await supabase
+              .from("shops")
+              .select("*")
+              .eq("owner_id", user!.id)
+              .limit(1);
+            s = (retryList ?? [])[0] ?? null;
+          } else {
+            throw createErr;
+          }
+        } else {
+          s = created;
+        }
       }
+
       if (!s) throw new Error("تعذّر تحميل بيانات المحل");
       setShop(s as Shop);
       await loadQueues((s as Shop).id);
