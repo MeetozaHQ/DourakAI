@@ -12,9 +12,27 @@ const Admin = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
   type ShopRow = { id: string; name: string; slug: string; plan: string; created_at: string };
+  type Commission = {
+    id: string;
+    amount: number;
+    status: string;
+    created_at: string;
+    referrer?: { name: string; owner_id: string };
+    referred?: { name: string };
+  };
   const [shops, setShops] = useState<ShopRow[]>([]);
   const [profiles, setProfiles] = useState<Record<string, unknown>[]>([]);
   const [refs, setRefs] = useState<Record<string, unknown>[]>([]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [withdrawals, setWithdrawals] = useState<{
+    id: string;
+    amount: number;
+    phone_number: string;
+    account_name: string;
+    status: string;
+    created_at: string;
+    shop?: { name: string; owner_id: string };
+  }[]>([]);
 
   useEffect(() => {
     if (!loading) {
@@ -25,18 +43,43 @@ const Admin = () => {
   }, [loading, user, isAdmin, navigate]);
 
   const load = async () => {
-    const [{ data: s }, { data: p }, { data: r }] = await Promise.all([
+    const [{ data: s }, { data: p }, { data: r }, { data: c }, { data: w }] = await Promise.all([
       supabase.from("shops").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("*"),
       supabase.from("referrals").select("*"),
+      supabase.from("commissions").select(`
+        *,
+        referrer:referrer_shop_id (name, owner_id),
+        referred:referred_shop_id (name)
+      `).order("created_at", { ascending: false }),
+      supabase.from("withdrawals").select(`
+        *,
+        shop:shop_id (name, owner_id)
+      `).order("created_at", { ascending: false }),
     ]);
-    setShops((s ?? []) as ShopRow[]); setProfiles(p ?? []); setRefs(r ?? []);
+    setShops((s ?? []) as ShopRow[]);
+    setProfiles(p ?? []);
+    setRefs(r ?? []);
+    setCommissions(c ?? []);
+    setWithdrawals(w ?? []);
   };
 
   const setPlan = async (shopId: string, plan: PlanId) => {
-    await supabase.from("shops").update({ plan, daily_limit: plan === "free" ? 20 : 999999 }).eq("id", shopId);
+    await supabase.from("shops").update({ plan, daily_limit: plan === "free" ? 10 : 999999 }).eq("id", shopId);
     toast.success("تم التحديث");
     void load();
+  };
+
+  const markCommissionPaid = async (id: string) => {
+    const { error } = await supabase.from("commissions").update({ status: "paid" }).eq("id", id);
+    if (error) toast.error("تعذر تحديث الحالة");
+    else { toast.success("تم التحديث"); void load(); }
+  };
+
+  const setWithdrawalStatus = async (id: string, status: string) => {
+    const { error } = await supabase.from("withdrawals").update({ status }).eq("id", id);
+    if (error) toast.error("تعذر تحديث الحالة");
+    else { toast.success("تم التحديث"); void load(); }
   };
 
   if (loading || !isAdmin) return <div className="bg-surface min-h-screen" />;
@@ -77,7 +120,7 @@ const Admin = () => {
           ))}
         </div>
 
-        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface">
+        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface mb-8">
           <h2 className="text-xl font-black text-surface-fg mb-4">المحلات</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -112,6 +155,102 @@ const Admin = () => {
                     <td className="py-3 px-2 text-surface-muted text-xs">{new Date(s.created_at).toLocaleDateString("ar-EG")}</td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface mb-8">
+          <h2 className="text-xl font-black text-surface-fg mb-4">العمولات</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-surface text-surface-muted">
+                  <th className="text-right py-3 px-2">المسوق (المحل)</th>
+                  <th className="text-right py-3 px-2">المحل المشترك</th>
+                  <th className="text-right py-3 px-2">المبلغ</th>
+                  <th className="text-right py-3 px-2">الحالة</th>
+                  <th className="text-right py-3 px-2">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {commissions.length > 0 ? (
+                  commissions.map(c => (
+                    <tr key={c.id} className="border-b border-surface text-surface-fg">
+                      <td className="py-3 px-2 font-bold">{c.referrer?.name || "مجهول"}</td>
+                      <td className="py-3 px-2">{c.referred?.name || "مجهول"}</td>
+                      <td className="py-3 px-2 font-black text-primary">{c.amount} ج</td>
+                      <td className="py-3 px-2">
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
+                          c.status === "paid" ? "bg-success/10 text-success" : "bg-amber-500/10 text-amber-500"
+                        }`}>{c.status === "paid" ? "تم التحويل" : "انتظار"}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        {c.status === "pending" && (
+                          <Button size="sm" onClick={() => markCommissionPaid(c.id)} className="h-7 bg-success text-white">
+                            تأكيد الدفع
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-surface-muted italic">لا توجد عمولات حالياً</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface">
+          <h2 className="text-xl font-black text-surface-fg mb-4">طلبات السحب</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-surface text-surface-muted">
+                  <th className="text-right py-3 px-2">المسوق (المحل)</th>
+                  <th className="text-right py-3 px-2">بيانات السحب</th>
+                  <th className="text-right py-3 px-2">المبلغ</th>
+                  <th className="text-right py-3 px-2">الحالة</th>
+                  <th className="text-right py-3 px-2">الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {withdrawals.length > 0 ? (
+                  withdrawals.map(w => (
+                    <tr key={w.id} className="border-b border-surface text-surface-fg">
+                      <td className="py-3 px-2 font-bold">{w.shop?.name || "مجهول"}</td>
+                      <td className="py-3 px-2">
+                         <div className="font-bold">{w.account_name}</div>
+                         <div className="text-[10px] text-surface-muted">{w.phone_number}</div>
+                      </td>
+                      <td className="py-3 px-2 font-black text-success">{w.amount} ج</td>
+                      <td className="py-3 px-2">
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
+                          w.status === "paid" ? "bg-success/10 text-success" : w.status === "pending" ? "bg-amber-500/10 text-amber-500" : "bg-destructive/10 text-destructive"
+                        }`}>{w.status === "paid" ? "تم" : w.status === "pending" ? "انتظار" : "مرفوض"}</span>
+                      </td>
+                      <td className="py-3 px-2">
+                        {w.status === "pending" && (
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => setWithdrawalStatus(w.id, "paid")} className="h-7 bg-success text-white">
+                              تم الدفع
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => setWithdrawalStatus(w.id, "rejected")} className="h-7 text-destructive border-destructive">
+                              رفض
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-surface-muted italic">لا توجد طلبات سحب حالياً</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
