@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,12 +89,8 @@ const Affiliate = () => {
     if (!loading && !user) navigate("/login");
   }, [user, loading, navigate]);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!user) return;
-    void load();
-  }, [user]);
-
-  const load = async () => {
     const { data: profile } = await supabase.from("profiles").select("referral_code").eq("id", user!.id).maybeSingle();
     if (profile) setCode(profile.referral_code);
 
@@ -134,7 +130,50 @@ const Affiliate = () => {
       today: list.filter(c => new Date(c.created_at).getTime() >= today).reduce((a, c) => a + (c.amount || 0), 0),
       month: list.filter(c => new Date(c.created_at).getTime() >= month).reduce((a, c) => a + (c.amount || 0), 0),
     });
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    void load();
+  }, [user, load]);
+
+  useEffect(() => {
+    if (!user || !shopId) return;
+
+    const refSub = supabase
+      .channel('new-referrals')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'referrals', filter: `referrer_id=eq.${user.id}` },
+        () => {
+          toast.success("🎉 إحالة جديدة انضمت باسمك!", {
+            description: "سيظهر تأثيرها في رصيدك بمجرد اشتراكهم في باقة مدفوعة.",
+          });
+          void load();
+        }
+      )
+      .subscribe();
+
+    const commSub = supabase
+      .channel('new-commissions')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'commissions', filter: `referrer_shop_id=eq.${shopId}` },
+        (payload) => {
+          const amount = payload.new.amount;
+          toast.success(`💰 مبروك! كسبت ${amount} ج عمولة!`, {
+            description: "تمت إضافة عمولة جديدة إلى رصيدك المعلق.",
+          });
+          void load();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(refSub);
+      void supabase.removeChannel(commSub);
+    };
+  }, [user, shopId, load]);
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
