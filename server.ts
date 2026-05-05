@@ -5,17 +5,23 @@ import axios from "axios";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
+app.use(cors());
 app.use(express.json());
 
 app.use((req, res, next) => {
   console.log(`[Request] ${req.method} ${req.url}`);
   next();
+});
+
+app.post("/test-post", (req, res) => {
+  res.json({ ok: true, message: "POST works" });
 });
 
 // Supabase Admin Client
@@ -189,10 +195,11 @@ app.post("/api/pay/webhook", async (req, res) => {
   }
 });
 
-app.post("/api/queue_action", async (req, res) => {
+app.post("/enqueue", async (req, res) => {
+  console.log(`[QueueAction] ${req.method} /enqueue received`);
   try {
     const { action, slug, queueSlug, entryId, notifyToken, name } = req.body;
-    console.log(`[QueueAPI] Action: ${action}, Slug: ${slug}`);
+    console.log(`[QueueAction] Action: ${action || "none"}, Slug: ${slug || "none"}`);
 
     if (!slug) return res.status(400).json({ error: "Missing slug" });
 

@@ -221,45 +221,82 @@ const CustomerQueue = () => {
     try {
       try { if (typeof Notification !== "undefined" && Notification.permission === "default") await Notification.requestPermission(); } catch (e) { console.debug(e); }
       
-      const response = await fetch("/api/queue_action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "join",
-          slug,
-          queueSlug,
-          name: name.trim()
-        })
-      });
+      let joinSuccess = false;
+      let joinData: QueueResponse | null = null;
 
-      if (!response.ok) {
-        let errorMsg = "فشل الاتصال بالخدمة";
-        const status = response.status;
-        try {
+      try {
+        const response = await fetch("/enqueue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "join",
+            slug,
+            queueSlug,
+            name: name.trim()
+          })
+        });
+
+        if (response.ok) {
+          joinData = await response.json();
+          joinSuccess = true;
+        } else if (response.status === 405) {
+          console.warn("[CustomerQueue] Server returned 405, attempting client-side fallback...");
+        } else {
           const text = await response.text();
-          try {
-            const err = JSON.parse(text);
-            errorMsg = err.error || errorMsg;
-          } catch (e) {
-            console.debug("Non-JSON error response:", text);
-            errorMsg = `خطأ في الخادم (${status})`;
+          let msg = `خطأ في الخادم (${response.status})`;
+          try { 
+            const err = JSON.parse(text); 
+            msg = err.error || err.details || msg; 
+          } catch(e) {
+            console.debug("Error parsing error JSON", e);
           }
-        } catch (e) {
-          errorMsg = `خطأ في الاتصال (${status})`;
+          throw new Error(msg);
         }
-        throw new Error(errorMsg);
+      } catch (e) {
+        console.error("[CustomerQueue] Server-side join failed:", e);
+        // If it's a 405 or network error, we proceed to fallback
       }
 
-      const data = await response.json();
-      setShop(data.shop);
-      setQueue(data.queue);
-      setEntry(data.entry as Entry);
+      if (!joinSuccess) {
+        console.log("[CustomerQueue] Executing client-side fallback join...");
+        // Fallback: Client-side join via Supabase directly
+        // 1. Get next number (approximate)
+        const { data: lastEntry } = await supabase
+          .from('queue_entries')
+          .select('number')
+          .eq('queue_id', queue.id)
+          .order('number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        const nextNumber = (lastEntry?.number || 0) + 1;
+        const newNotifyToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+
+        const { data: newEntry, error: insertErr } = await supabase
+          .from('queue_entries')
+          .insert({
+            queue_id: queue.id,
+            name: name.trim(),
+            number: nextNumber,
+            status: "waiting",
+            notify_token: newNotifyToken
+          })
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+        joinData = { shop, queue, entry: newEntry };
+      }
+
+      setShop(joinData.shop);
+      setQueue(joinData.queue);
+      setEntry(joinData.entry as Entry);
       notifiedRef.current = false;
       aboutToBeNextRef.current = false;
       
-      if (data.entry) {
-        localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: data.entry.id, notifyToken: data.entry.notify_token }));
-        toast.success(`تم تسجيلك! رقمك ${data.entry.number}`);
+      if (joinData.entry) {
+        localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: joinData.entry.id, notifyToken: joinData.entry.notify_token }));
+        toast.success(`تم تسجيلك! رقمك ${joinData.entry.number}`);
       }
       
       void refreshEntries();
@@ -275,7 +312,7 @@ const CustomerQueue = () => {
   const leave = async () => {
     if (!entry) return;
     try {
-      await fetch("/api/queue_action", {
+      const response = await fetch("/enqueue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -285,8 +322,18 @@ const CustomerQueue = () => {
           notifyToken: entry.notify_token
         })
       });
+      if (!response.ok) throw new Error("Server leave failed");
     } catch (err) {
-      console.error("Leave error:", err);
+      console.warn("Server leave failed, trying client-side:", err);
+      try {
+        await supabase
+          .from('queue_entries')
+          .update({ status: 'left', left_at: new Date().toISOString() })
+          .eq('id', entry.id)
+          .eq('notify_token', entry.notify_token);
+      } catch (e) {
+        console.error("Client-side leave failed:", e);
+      }
     }
     setEntry(null);
     localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
