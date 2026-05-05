@@ -183,6 +183,8 @@ app.post("/api/pay/webhook", async (req, res) => {
 app.post("/api/queue", async (req, res) => {
   try {
     const { action, slug, queueSlug, entryId, notifyToken, name } = req.body;
+    console.log(`[QueueAPI] ${action} path: /q/${slug}${queueSlug ? `/${queueSlug}` : ""}`);
+
     if (!slug) return res.status(400).json({ error: "Missing slug" });
 
     // 1. Get Shop

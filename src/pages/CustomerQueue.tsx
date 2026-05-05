@@ -177,19 +177,15 @@ const CustomerQueue = () => {
       if (attemptId === loadAttemptRef.current) {
         let msg = TEMPORARY_LOAD_ERROR;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyE = e as any;
+        const anyE = e as { context?: { error?: string }; message?: string };
         if (anyE?.context && typeof anyE.context === 'object' && anyE.context.error) {
           msg = anyE.context.error;
-        } else if (anyE?.message && anyE.message !== "Edge Function returned a non-2xx status code") {
-          msg = anyE.message;
-        } else if (anyE?.error && typeof anyE.error === 'string') {
-          msg = anyE.error;
-        } else if (anyE?.name === "FunctionsHttpError") {
-          msg = "تعذّر العثور على طابور نشط لهذا المحل.";
+        } else {
+          msg = anyE.message || "فشل الاتصال بالخدمة (الخادم)";
         }
         setLoadError(msg);
       }
-      console.error(e);
+      console.error("[CustomerQueue] Error loading shop:", e);
     } finally {
       if (attemptId === loadAttemptRef.current) setInitialLoading(false);
     }
@@ -251,14 +247,10 @@ const CustomerQueue = () => {
       localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: data.entry?.id, notifyToken: data.entry?.notify_token }));
       toast.success(`تم تسجيلك! رقمك ${data.entry?.number}`);
     } catch (e: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const anyE = e as any;
-      let msg = "تعذّر الحجز مؤقتاً، حاول مرة أخرى";
-      if (anyE?.context && typeof anyE.context === 'object' && anyE.context.error) msg = anyE.context.error;
-      else if (anyE?.message && anyE.message !== "Edge Function returned a non-2xx status code") msg = anyE.message;
-      else if (anyE?.error && typeof anyE.error === 'string') msg = anyE.error;
+      console.error("[CustomerQueue] Join error:", e);
+      const anyE = e as { message?: string };
+      const msg = anyE?.message || "تعذّر الحجز مؤقتاً، حاول مرة أخرى";
       toast.error(msg);
-      console.error(e);
     } finally {
       setLoading(false);
     }
