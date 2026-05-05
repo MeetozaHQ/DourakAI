@@ -26,6 +26,10 @@ const Dashboard = () => {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [stats, setStats] = useState({ avgWait: 0, waiting: 0, served: 0, total: 0 });
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const currentLimit = shop?.daily_limit ?? (shop?.plan === "free" ? 10 : Infinity);
+  const isLimitReached = shop?.plan === "free" && stats.total >= currentLimit;
 
   useEffect(() => {
     console.log("[Dashboard] auth state", { loading, hasUser: !!user, userId: user?.id });
@@ -253,6 +257,53 @@ const Dashboard = () => {
 
   return (
     <div className="bg-surface min-h-screen" dir="rtl">
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-4xl bg-surface rounded-[2.5rem] p-8 shadow-2xl border border-surface overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-8">
+              <Logo size="md" />
+              <Button variant="ghost" size="icon" onClick={() => setShowUpgradeModal(false)} className="rounded-full">
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-black text-surface-fg animate-in slide-in-from-top duration-500">اختر الباقة المثالية لنمو عملك</h2>
+              <p className="text-surface-muted mt-2">كل المميزات اللي محتاجها في مكان واحد</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {Object.values(PLANS).map((p) => (
+                <div key={p.id} className={`p-6 rounded-3xl border transition-all ${p.id === "pro" ? "bg-gradient-primary text-white border-transparent scale-105 shadow-elegant" : "bg-surface-card border-surface shadow-soft"}`}>
+                  <div className="text-center mb-6">
+                    <h3 className="text-xl font-black">{p.name}</h3>
+                    <div className="flex items-baseline justify-center gap-1 mt-2">
+                       <span className="text-4xl font-black">{p.price}</span>
+                       <span className="text-xs opacity-70">ج/شهر</span>
+                    </div>
+                  </div>
+                  <ul className="space-y-3 mb-8 min-h-[200px]">
+                    {p.features.map(f => (
+                      <li key={f.key} className="flex items-start gap-2 text-sm text-right">
+                        <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${p.id === "pro" ? "text-white" : "text-success"}`} />
+                        <span className={p.id === "pro" ? "text-white/90" : "text-surface-fg/90"}>{f.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    onClick={() => { setShowUpgradeModal(false); navigate("/pricing"); }}
+                    className={`w-full rounded-2xl h-12 font-black ${p.id === "pro" ? "bg-white text-primary hover:bg-white/90" : "bg-primary text-white hover:bg-primary/90"}`}
+                  >
+                    {shop?.plan === p.id ? "باقتك الحالية" : p.cta}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Onboarding Overlay */}
       {showOnboarding && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-md animate-in fade-in duration-500">
@@ -336,6 +387,19 @@ const Dashboard = () => {
 
       {/* Header */}
       <header className="bg-surface-card border-b border-surface px-6 py-4 sticky top-0 z-30">
+        {/* Upsell Banner */}
+        {shop.plan === "free" && (
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 -mx-6 -mt-4 mb-4 px-6 py-2.5 flex items-center justify-between animate-in slide-in-from-top duration-500">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              <span className="text-xs font-bold text-surface-fg">استخدم كل المميزات مع الباقة الاحترافية</span>
+            </div>
+            <Button variant="link" size="sm" onClick={() => setShowUpgradeModal(true)} className="text-xs font-black text-primary p-0 h-auto">
+              ترقية الآن 👋
+            </Button>
+          </div>
+        )}
+
         <div className="container mx-auto flex items-center justify-between max-w-7xl gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={() => navigate("/pricing")} className="gap-1">
@@ -396,6 +460,23 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Stats */}
+            {isLimitReached && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-4 mb-8 flex items-center justify-between gap-4 animate-in zoom-in duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-destructive/20 rounded-full flex items-center justify-center text-destructive">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="font-black text-destructive text-sm">وصلت للحد اليومي (10 زبائن)</div>
+                    <div className="text-xs text-destructive/80 font-medium">اشترك في الباقة الاحترافية لعدد غير محدود</div>
+                  </div>
+                </div>
+                <Button onClick={() => setShowUpgradeModal(true)} size="sm" className="bg-destructive text-white hover:bg-destructive/90 rounded-full font-bold px-5">
+                  ترقية الآن
+                </Button>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               {[
                 { icon: Clock, value: `${stats.avgWait} دقيقة`, label: "متوسط الانتظار", color: "text-primary bg-primary/10" },

@@ -28,7 +28,7 @@ const Pricing = () => {
   const choose = async (planId: PlanId) => {
     if (!shopId) return;
     if (planId === "free") {
-      await supabase.from("shops").update({ plan: "free", daily_limit: 20 }).eq("id", shopId);
+      await supabase.from("shops").update({ plan: "free", daily_limit: 10 }).eq("id", shopId);
       setCurrent("free");
       toast.success("تم التفعيل");
       return;

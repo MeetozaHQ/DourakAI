@@ -1,6 +1,6 @@
 export type PlanFeatureKey =
   | "queue_basic"
-  | "daily_limit_20"
+  | "daily_limit_10"
   | "qr_code"
   | "basic_stats"
   | "unlimited_queues"
@@ -28,7 +28,7 @@ export const PLANS = {
     description: "ابدأ بدون أي تكلفة",
     features: [
       { key: "queue_basic", label: "طابور واحد" },
-      { key: "daily_limit_20", label: "حتى 20 زبون في اليوم" },
+      { key: "daily_limit_10", label: "حتى 10 زبون في اليوم" },
       { key: "qr_code", label: "رمز QR جاهز للطباعة" },
       { key: "basic_stats", label: "إحصائيات أساسية" },
     ] as PlanFeature[],

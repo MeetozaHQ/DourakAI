@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
       // Enforce daily limit for free plan
       if (shop.plan === "free") {
-        const limit = shop.daily_limit ?? 20;
+        const limit = shop.daily_limit ?? 10;
         const [countRow] = await sql`
           select count(*)::int as cnt
           from public.queue_entries
