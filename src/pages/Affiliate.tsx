@@ -1,20 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
-import { Gift, TrendingUp, DollarSign, Users, Copy, ArrowLeft, Phone } from "lucide-react";
+import { Gift, TrendingUp, DollarSign, Users, Copy, ArrowLeft, Phone, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "motion/react";
 
-const AFFILIATE_BASE_URL = "https://wait-free.lovable.app";
+const AnimatedNumber = ({ value }: { value: number }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const prevValue = useRef(0);
+
+  useEffect(() => {
+    const start = prevValue.current;
+    const end = value;
+    const duration = 1500;
+    const startTime = performance.now();
+
+    const update = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOutExpo = 1 - Math.pow(2, -10 * progress);
+      const current = Math.floor(start + (end - start) * easeOutExpo);
+      
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        prevValue.current = end;
+      }
+    };
+
+    requestAnimationFrame(update);
+  }, [value]);
+
+  return <span>{displayValue.toLocaleString("ar-EG")}</span>;
+};
 
 const Affiliate = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [shopId, setShopId] = useState("");
-  const [stats, setStats] = useState({ count: 0, earnings: 0, pending: 0, withdrawn: 0 });
+  const [stats, setStats] = useState({ 
+    count: 0, 
+    earnings: 0, 
+    pending: 0, 
+    withdrawn: 0,
+    today: 0,
+    month: 0
+  });
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ phone: "", name: "" });
   const [withdrawals, setWithdrawals] = useState<{
@@ -71,11 +108,17 @@ const Affiliate = () => {
     const withList = withds ?? [];
     setWithdrawals(withList);
 
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const month = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
     setStats({
       count: refCount,
       earnings: list.filter(c => c.status === "paid").reduce((a, c) => a + (c.amount || 0), 0),
       pending: list.filter(c => c.status === "pending").reduce((a, c) => a + (c.amount || 0), 0),
       withdrawn: withList.filter(w => w.status === "paid" || w.status === "pending").reduce((a, w) => a + (w.amount || 0), 0),
+      today: list.filter(c => new Date(c.created_at).getTime() >= today).reduce((a, c) => a + (c.amount || 0), 0),
+      month: list.filter(c => new Date(c.created_at).getTime() >= month).reduce((a, c) => a + (c.amount || 0), 0),
     });
   };
 
@@ -107,10 +150,10 @@ const Affiliate = () => {
   const url = `${window.location.origin}/signup?ref=${shopId || code}`;
 
   return (
-    <div className="bg-surface min-h-screen" dir="rtl">
-      <header className="bg-surface-card border-b border-surface px-6 py-4">
+    <div className="bg-surface min-h-screen font-sans" dir="rtl">
+      <header className="bg-surface-card border-b border-surface px-6 py-4 sticky top-0 z-50 backdrop-blur-md bg-surface-card/80">
         <div className="container mx-auto flex items-center justify-between max-w-4xl">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")} className="text-surface-fg/70 hover:bg-surface-muted gap-2">
+          <Button variant="ghost" onClick={() => navigate("/dashboard")} className="text-surface-fg/70 hover:bg-surface-muted gap-2 rounded-xl">
             <ArrowLeft className="w-4 h-4 rotate-180" />
             لوحة التحكم
           </Button>
@@ -119,162 +162,202 @@ const Affiliate = () => {
       </header>
 
       <main className="container mx-auto max-w-4xl px-6 py-12">
-        <div className="text-center mb-10 animate-fade-up">
-          <div className="inline-flex w-20 h-20 rounded-3xl bg-gradient-gold items-center justify-center text-4xl mb-5 shadow-elegant">
-            💰
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <div className="inline-flex w-24 h-24 rounded-[2rem] bg-gradient-gold items-center justify-center text-5xl mb-6 shadow-2xl relative">
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            >
+              💰
+            </motion.div>
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-success rounded-full border-2 border-white animate-pulse" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-surface-fg mb-3">برنامج الشركاء</h1>
-          <p className="text-surface-muted text-lg max-w-xl mx-auto">
-            رشّح محلات لدَوْرَك واكسب <span className="font-bold text-primary">١٥% عمولة</span> على كل اشتراك — شهرياً لمدة سنة كاملة.
+          <h1 className="text-4xl md:text-6xl font-black text-surface-fg mb-4 tracking-tight">برنامج الشركاء</h1>
+          <p className="text-surface-muted text-xl max-w-2xl mx-auto leading-relaxed">
+            رشّح محلات لدَوْرَك واكسب <span className="font-bold text-primary underline underline-offset-4">١٥% عمولة</span> على كل اشتراك.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        {/* Live Earnings Header */}
+        <section className="mb-12">
+          <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-[3rem] p-1 shadow-2xl overflow-hidden">
+            <div className="bg-white/5 backdrop-blur-xl p-8 md:p-12 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl -ml-32 -mb-32" />
+              
+              <div className="relative z-10">
+                <span className="inline-block px-4 py-1.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-widest mb-4">إجمالي أرباحك</span>
+                <div className="text-7xl md:text-8xl font-black text-white mb-6 flex items-center justify-center gap-1">
+                  <AnimatedNumber value={stats.earnings + stats.pending} />
+                  <span className="text-3xl md:text-4xl opacity-70">ج</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                   <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/10">
+                     <div className="text-white/60 text-[10px] font-bold uppercase mb-1">أرباح اليوم</div>
+                     <div className="text-2xl font-black text-white">
+                       <AnimatedNumber value={stats.today} />
+                       <span className="text-sm ml-1 opacity-60 font-medium">ج</span>
+                     </div>
+                   </div>
+                   <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/10 text-right">
+                     <div className="text-white/60 text-[10px] font-bold uppercase mb-1">أرباح هذا الشهر</div>
+                     <div className="text-2xl font-black text-white">
+                       <AnimatedNumber value={stats.month} />
+                       <span className="text-sm ml-1 opacity-60 font-medium">ج</span>
+                     </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { icon: Gift, label: "نسبة العمولة", value: "١٥%", color: "text-warning bg-warning/10" },
             { icon: TrendingUp, label: "أرباح مؤكدة", value: `${stats.earnings} ج`, color: "text-success bg-success/10" },
             { icon: DollarSign, label: "أرباح معلقة", value: `${stats.pending} ج`, color: "text-primary bg-primary/10" },
             { icon: Users, label: "محلات رشحتها", value: stats.count, color: "text-accent bg-accent/10" },
           ].map((s, i) => (
-            <div key={i} className="bg-surface-card rounded-2xl p-5 shadow-soft border border-surface text-center">
-              <div className={`inline-flex w-10 h-10 rounded-xl items-center justify-center mb-3 ${s.color}`}>
-                <s.icon className="w-5 h-5" />
+            <div key={i} className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface text-center hover:scale-[1.02] transition-transform">
+              <div className={`inline-flex w-12 h-12 rounded-2xl items-center justify-center mb-4 ${s.color}`}>
+                <s.icon className="w-6 h-6" />
               </div>
               <div className="text-2xl font-black text-surface-fg">{s.value}</div>
-              <div className="text-xs text-surface-muted mt-1">{s.label}</div>
+              <div className="text-xs text-surface-muted mt-1 font-bold">{s.label}</div>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-end mb-8">
+        <div className="flex justify-center mb-12">
            <Button 
             onClick={() => {
-              if (stats.earnings - stats.withdrawn < 50) {
+              const balance = stats.earnings - stats.withdrawn;
+              if (balance < 50) {
                 toast.info("يجب أن يكون رصيدك 50 ج على الأقل للسحب");
               } else {
                 setShowWithdrawModal(true);
               }
             }}
-            className="bg-success text-white hover:bg-success/90 rounded-2xl h-12 px-8 font-bold gap-2 shadow-elegant"
+            className="bg-white text-primary border-2 border-primary/20 hover:bg-primary/5 rounded-[2rem] h-16 px-12 font-black text-lg gap-3 shadow-elegant transition-all active:scale-95"
            >
-             <DollarSign className="w-4 h-4" />
-             طلب سحب الأرباح (المتوفر: {stats.earnings - stats.withdrawn} ج)
+             <DollarSign className="w-6 h-6" />
+             سحب الأرباح المتوفرة ({stats.earnings - stats.withdrawn} ج)
            </Button>
         </div>
 
-        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface mb-10">
-          <div className="text-center mb-5">
-            <h2 className="text-xl font-black text-surface-fg mb-1">رابطك الخاص</h2>
-            <p className="text-sm text-surface-muted">شارك هذا الرابط مع أصحاب المحلات وابدأ تكسب</p>
-          </div>
-          <div className="flex flex-col md:flex-row gap-3">
-            <div dir="ltr" className="flex-1 bg-surface-muted rounded-2xl px-5 py-4 text-sm font-mono text-surface-fg border border-surface truncate flex items-center justify-center">
-              {url}
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          {/* Referral Link Box */}
+          <div className="md:col-span-2 bg-surface-card rounded-[2.5rem] p-8 shadow-soft border border-surface flex flex-col justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-surface-fg mb-2">رابطك الخاص</h2>
+              <p className="text-sm text-surface-muted mb-8 italic">شارك هذا الرابط مع أصحاب المحلات وابدأ في بناء دخلك السلبي</p>
             </div>
-            <Button
-              onClick={() => { navigator.clipboard.writeText(url); toast.success("تم النسخ ✓"); }}
-              className="bg-gradient-primary text-primary-foreground rounded-2xl h-14 px-8 font-bold gap-2 shadow-elegant"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              نسخ الرابط
-            </Button>
+            <div className="flex flex-col gap-3">
+              <div dir="ltr" className="bg-surface-muted rounded-2xl px-6 py-5 text-sm font-mono text-surface-fg border border-surface truncate text-center font-bold tracking-tight">
+                {url}
+              </div>
+              <Button
+                onClick={() => { navigator.clipboard.writeText(url); toast.success("تم النسخ ✓"); }}
+                className="bg-gradient-primary text-primary-foreground rounded-2xl h-14 px-8 font-black gap-3 shadow-elegant hover:shadow-2xl transition-all"
+              >
+                <Copy className="w-5 h-5" />
+                نسخ الرابط ونشره
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick Guide Card */}
+          <div className="bg-primary/5 border-2 border-dashed border-primary/20 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center">
+             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+               <TrendingUp className="w-8 h-8 text-primary" />
+             </div>
+             <h3 className="font-black text-lg text-primary mb-2">إزاي تكسب أكتر؟</h3>
+             <p className="text-xs text-surface-muted leading-relaxed">
+               وزع فلاير "دَوْرَك" في المولات أو المحلات المزدحمة في منطقتك، وسجلهم برابطك عشان تضمن عمولتك.
+             </p>
           </div>
         </div>
 
-        <div className="space-y-10">
+        <div className="space-y-12">
           <section>
-            <h2 className="text-2xl font-black text-surface-fg mb-6 text-right">الأرباح من الإحالات</h2>
-            <div className="bg-surface-card rounded-3xl border border-surface shadow-soft overflow-hidden">
-              <div className="p-6 border-b border-surface bg-slate-50/50">
-                 <div className="grid grid-cols-3 gap-4 text-center">
-                   <div>
-                     <div className="text-xs text-surface-muted mb-1">عدد الإحالات</div>
-                     <div className="text-xl font-black text-surface-fg">{stats.count}</div>
-                   </div>
-                   <div>
-                     <div className="text-xs text-surface-muted mb-1">إجمالي الأرباح</div>
-                     <div className="text-xl font-black text-primary">{stats.earnings + stats.pending} ج</div>
-                   </div>
-                   <div>
-                     <div className="text-xs text-surface-muted mb-1">الحالة</div>
-                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success text-[10px] font-bold">
-                       <TrendingUp className="w-3 h-3" /> نشط
-                     </div>
-                   </div>
-                 </div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                 <Clock className="w-5 h-5 text-primary" />
+                 <h2 className="text-2xl font-black text-surface-fg">آخر ٥ عمولات</h2>
               </div>
+              {commissions.length > 5 && (
+                <span className="text-xs font-bold text-primary cursor-pointer hover:underline">عرض الكل</span>
+              )}
+            </div>
+            <div className="bg-surface-card rounded-[2.5rem] border border-surface shadow-soft overflow-hidden">
               <div className="divide-y divide-surface">
                 {commissions.length > 0 ? (
-                  commissions.map((c) => (
-                    <div key={c.id} className="p-4 flex items-center justify-between hover:bg-surface-muted/50 transition-colors">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-surface-fg text-sm">{c.referred?.name || "محل مشترك"}</span>
-                        <span className="text-[10px] text-surface-muted">{new Date(c.created_at).toLocaleDateString("ar-EG")}</span>
+                  commissions.slice(0, 5).map((c) => (
+                    <div key={c.id} className="p-6 flex items-center justify-between hover:bg-surface-muted/30 transition-colors group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-surface-muted flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                          🏪
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-black text-surface-fg text-base">{c.referred?.name || "محل مشترك جديد"}</span>
+                          <span className="text-xs text-surface-muted flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(c.created_at).toLocaleDateString("ar-EG")}
+                          </span>
+                        </div>
                       </div>
                       <div className="text-left">
-                        <div className="font-black text-primary text-sm">+{c.amount} ج</div>
-                        <div className={`text-[10px] font-bold ${c.status === "paid" ? "text-success" : "text-amber-500"}`}>
+                        <div className="font-black text-primary text-lg">+{c.amount} ج</div>
+                        <div className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${c.status === "paid" ? "text-success bg-success/10" : "text-amber-500 bg-amber-500/10"}`}>
                           {c.status === "paid" ? "تم التحويل" : "انتظار الدفع"}
                         </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="p-12 text-center text-surface-muted text-sm italic">
-                    {stats.count === 0 ? "لا يوجد إحالات بعد. ابدأ بمشاركة رابطك!" : "محل رشحته اشترك، في انتظار اشتراكه في باقة مدفوعة..."}
+                  <div className="p-16 text-center">
+                    <div className="text-4xl mb-4">💨</div>
+                    <p className="text-surface-muted text-sm italic font-medium">
+                      {stats.count === 0 ? "لا يوجد إحالات بعد. ابدأ بمشاركة رابطك!" : "محل رشحته اشترك، في انتظار باقته المدفوعة..."}
+                    </p>
                   </div>
                 )}
               </div>
             </div>
           </section>
 
-          <section className="bg-primary/5 border border-primary/20 rounded-3xl p-8">
-            <h3 className="text-2xl font-black text-surface-fg mb-6 text-right">كيف يعمل البرنامج؟</h3>
-            <div className="grid md:grid-cols-2 gap-8">
-              <ol className="space-y-6">
-                {[
-                  "شارك رابطك الخاص مع أصحاب المحلات في منطقتك",
-                  "لما حد يشترك من خلال رابطك، تتسجل إحالة باسمك",
-                  "لما المشترك يفعل باقة مدفوعة، هتحصل على عمولة ١٥%",
-                  "العمولة بتستمر لمدة ١٢ شهر من تاريخ اشتراك صاحب المحل",
-                  "تقدر تسحب أرباحك لما توصل لـ ٥٠ ج عن طريق فودافون كاش",
-                ].map((t, i) => (
-                  <li key={i} className="flex items-start gap-4 text-surface-fg">
-                    <div className="w-8 h-8 rounded-full bg-gradient-primary text-white text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
-                      {i + 1}
-                    </div>
-                    <span className="font-medium text-lg leading-snug">{t}</span>
-                  </li>
-                ))}
-              </ol>
-              <div className="bg-surface-card rounded-2xl p-6 border border-primary/10 flex flex-col items-center justify-center text-center space-y-4">
-                 <Logo size="md" />
-                 <p className="text-sm text-surface-muted">هدفنا نكبر سوا، ونوصل دَوْرَك لكل مكان في مصر والوطن العربي. 🚀</p>
-                 <Button variant="outline" className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/10" onClick={() => window.open("https://wa.me/201035851931", "_blank")}>
-                   <Phone className="w-4 h-4" /> تواصل معنا
-                 </Button>
-              </div>
-            </div>
-          </section>
-
           {withdrawals.length > 0 && (
             <section>
-              <h2 className="text-2xl font-black text-surface-fg mb-6 text-right">طلبات السحب</h2>
-              <div className="bg-surface-card rounded-3xl border border-surface shadow-soft overflow-hidden">
+               <div className="flex items-center gap-2 mb-6">
+                 <DollarSign className="w-5 h-5 text-success" />
+                 <h2 className="text-2xl font-black text-surface-fg">سجل السحوبات</h2>
+              </div>
+              <div className="bg-surface-card rounded-[2.5rem] border border-surface shadow-soft overflow-hidden">
                 <div className="divide-y divide-surface">
                   {withdrawals.map((w) => (
-                    <div key={w.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-surface-fg text-sm">{w.account_name}</div>
-                        <div className="text-[10px] text-surface-muted">{w.phone_number} • {new Date(w.created_at).toLocaleDateString("ar-EG")}</div>
+                    <div key={w.id} className="p-6 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-success/10 text-success flex items-center justify-center">
+                          <ArrowLeft className="w-6 h-6 rotate-45" />
+                        </div>
+                        <div>
+                          <div className="font-black text-surface-fg text-base">{w.account_name}</div>
+                          <div className="text-xs text-surface-muted font-mono">{w.phone_number} • {new Date(w.created_at).toLocaleDateString("ar-EG")}</div>
+                        </div>
                       </div>
                       <div className="text-left">
-                        <div className="font-black text-surface-fg text-sm">{w.amount} ج</div>
-                        <div className={`text-[10px] font-bold ${
-                          w.status === "paid" ? "text-success" : 
-                          w.status === "pending" ? "text-amber-500" : "text-destructive"
+                        <div className="font-black text-surface-fg text-lg">{w.amount} ج</div>
+                        <div className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${
+                          w.status === "paid" ? "text-success bg-success/10" : 
+                          w.status === "pending" ? "text-amber-500 bg-amber-500/10" : "text-destructive bg-destructive/10"
                         }`}>
-                          {w.status === "paid" ? "تم التحويل" : w.status === "pending" ? "قيد الانتظار" : "مرفوض"}
+                          {w.status === "paid" ? "تم" : w.status === "pending" ? "انتظار" : "مرفوض"}
                         </div>
                       </div>
                     </div>
@@ -283,59 +366,104 @@ const Affiliate = () => {
               </div>
             </section>
           )}
+
+          <section className="bg-surface-card border border-surface rounded-[3rem] p-10 shadow-soft relative overflow-hidden text-right">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+               <Logo size="xl" />
+            </div>
+            <h3 className="text-3xl font-black text-surface-fg mb-8">إزاي البرنامج بيشتغل؟</h3>
+            <div className="grid md:grid-cols-2 gap-10">
+              <ol className="space-y-8">
+                {[
+                  { t: "شارك رابطك الخاص مع أصحاب المحلات في منطقتك", i: "🔗" },
+                  { t: "لما حد يشترك من خلال رابطك، تتسجل إحالة باسمك", i: "📝" },
+                  { t: "لما المشترك يفعل باقة مدفوعة، هتحصل على عمولة ١٥%", i: "💎" },
+                  { t: "العمولة بتستمر لمدة ١٢ شهر من تاريخ اشتراك صاحب المحل", i: "📅" },
+                  { t: "تقدر تسحب أرباحك لما توصل لـ ٥٠ ج عن طريق فودافون كاش", i: "📱" },
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-5 text-surface-fg">
+                    <div className="w-12 h-12 rounded-2xl bg-surface-muted flex items-center justify-center text-2xl flex-shrink-0 mt-0.5 shadow-sm">
+                      {step.i}
+                    </div>
+                    <span className="font-bold text-xl leading-snug">{step.t}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="bg-primary/5 rounded-3xl p-8 border-2 border-primary/10 flex flex-col items-center justify-center text-center space-y-6">
+                 <div className="w-20 h-20 bg-white rounded-[2rem] shadow-elegant flex items-center justify-center">
+                   <Logo size="lg" />
+                 </div>
+                 <p className="text-base text-surface-muted leading-relaxed font-medium">هدفنا نكبر سوا، ونوصل دَوْرَك لكل مكان في مصر والوطن العربي. 🚀</p>
+                 <Button 
+                    variant="outline" 
+                    className="w-full h-14 rounded-2xl gap-3 border-primary/20 text-primary font-black text-lg hover:bg-primary/10" 
+                    onClick={() => window.open("https://wa.me/201035851931", "_blank")}
+                 >
+                   <Phone className="w-5 h-5 text-success" /> تواصل معنا (واتساب)
+                 </Button>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
 
       {/* Withdraw Modal */}
-      {showWithdrawModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-md bg-surface-card rounded-[2.5rem] p-8 shadow-2xl border border-surface">
-            <h2 className="text-2xl font-black text-surface-fg mb-2">سحب الأرباح</h2>
-            <p className="text-surface-muted text-sm mb-6">سيتم تحويل المبلغ عبر فودافون كاش خلال ٤٨ ساعة</p>
-            
-            <form onSubmit={handleWithdraw} className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-surface-fg mb-1.5">رقم فودافون كاش</label>
-                <input 
-                  required
-                  type="tel"
-                  value={withdrawForm.phone}
-                  onChange={e => setWithdrawForm({...withdrawForm, phone: e.target.value})}
-                  placeholder="010XXXXXXXX"
-                  className="w-full h-12 bg-surface-muted border-none rounded-xl px-4 text-surface-fg focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-surface-fg mb-1.5">اسم صاحب الحساب</label>
-                <input 
-                  required
-                  type="text"
-                  value={withdrawForm.name}
-                  onChange={e => setWithdrawForm({...withdrawForm, name: e.target.value})}
-                  placeholder="الاسم الثلاثي"
-                  className="w-full h-12 bg-surface-muted border-none rounded-xl px-4 text-surface-fg focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-
-              <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 mb-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-surface-muted">المبلغ المتاح للسحب:</span>
-                  <span className="font-black text-primary">{stats.earnings - stats.withdrawn} ج</span>
+      <AnimatePresence>
+        {showWithdrawModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-surface/80 backdrop-blur-xl">
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.9, y: 20 }}
+               animate={{ opacity: 1, scale: 1, y: 0 }}
+               exit={{ opacity: 0, scale: 0.9, y: 20 }}
+               className="w-full max-w-md bg-surface-card rounded-[3rem] p-10 shadow-2xl border border-surface relative"
+            >
+              <h2 className="text-3xl font-black text-surface-fg mb-3">سحب الأرباح</h2>
+              <p className="text-surface-muted text-base mb-8 leading-relaxed">سيتم تحويل المبلغ عبر <span className="font-bold text-destructive underline underline-offset-4">فودافون كاش</span> خلال ٤٨ ساعة عمل.</p>
+              
+              <form onSubmit={handleWithdraw} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-black text-surface-fg mb-2 uppercase tracking-wide">رقم فودافون كاش</label>
+                  <input 
+                    required
+                    type="tel"
+                    value={withdrawForm.phone}
+                    onChange={e => setWithdrawForm({...withdrawForm, phone: e.target.value})}
+                    placeholder="010XXXXXXXX"
+                    className="w-full h-14 bg-surface-muted border-2 border-transparent focus:border-primary rounded-2xl px-6 text-surface-fg font-mono font-bold text-lg outline-none transition-all"
+                  />
                 </div>
-              </div>
+                <div>
+                  <label className="block text-sm font-black text-surface-fg mb-2 uppercase tracking-wide">اسم صاحب الحساب</label>
+                  <input 
+                    required
+                    type="text"
+                    value={withdrawForm.name}
+                    onChange={e => setWithdrawForm({...withdrawForm, name: e.target.value})}
+                    placeholder="الاسم الثلاثي بالكامل"
+                    className="w-full h-14 bg-surface-muted border-2 border-transparent focus:border-primary rounded-2xl px-6 text-surface-fg font-bold text-lg outline-none transition-all"
+                  />
+                </div>
 
-              <div className="flex gap-3">
-                <Button type="button" variant="ghost" onClick={() => setShowWithdrawModal(false)} className="flex-1 rounded-xl h-12">
-                  إلغاء
-                </Button>
-                <Button type="submit" className="flex-1 bg-success text-white hover:bg-success/90 rounded-xl h-12 font-bold shadow-elegant">
-                  تأكيد الطلب
-                </Button>
-              </div>
-            </form>
+                <div className="bg-primary/5 p-6 rounded-3xl border-2 border-primary/10 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-surface-muted font-bold">المبلغ المطلوب:</span>
+                    <span className="text-3xl font-black text-primary">{stats.earnings - stats.withdrawn} ج</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button type="button" variant="ghost" onClick={() => setShowWithdrawModal(false)} className="flex-1 rounded-2xl h-14 font-bold text-surface-muted">
+                    إلغاء
+                  </Button>
+                  <Button type="submit" className="flex-2 bg-success text-white hover:bg-success/90 rounded-2xl h-14 font-black shadow-elegant text-lg">
+                    تأكيد وتحويل
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };
