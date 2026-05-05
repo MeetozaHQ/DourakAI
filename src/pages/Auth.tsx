@@ -80,6 +80,8 @@ const Auth = ({ mode }: { mode: "login" | "signup" }) => {
         toast.error("بيانات الدخول غير صحيحة");
       } else if (msg.toLowerCase().includes("email not confirmed")) {
         toast.error("يرجى تأكيد بريدك الإلكتروني أولاً قبل تسجيل الدخول. راجع صندوق الوارد الخاص بك.");
+      } else if (msg.toLowerCase().includes("email rate limit exceeded")) {
+        toast.error("تم تجاوز حد المحاولات المسموح به. يرجى المحاولة مرة أخرى بعد قليل.");
       } else {
         toast.error(msg);
       }
