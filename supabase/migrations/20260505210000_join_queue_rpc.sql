@@ -45,8 +45,8 @@ BEGIN
   -- 4. Create Entry
   v_notify_token := encode(gen_random_bytes(16), 'hex');
   
-  INSERT INTO public.queue_entries (queue_id, name, number, status, notify_token)
-  VALUES (v_queue_id, p_name, v_next_number, 'waiting', v_notify_token)
+  INSERT INTO public.queue_entries (queue_id, shop_id, customer_name, number, status, notify_token)
+  VALUES (v_queue_id, v_shop_id, p_name, v_next_number, 'waiting', v_notify_token)
   RETURNING id INTO v_entry_id;
 
   -- 5. Build Result

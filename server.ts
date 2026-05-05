@@ -238,7 +238,7 @@ app.post("/enqueue", async (req, res) => {
       if (entryId && notifyToken) {
         const { data: e } = await supabaseAdmin
           .from("queue_entries")
-          .select("*")
+          .select("id, number, customer_name, status, notify_token")
           .eq("id", entryId)
           .eq("notify_token", notifyToken)
           .maybeSingle();
@@ -279,12 +279,13 @@ app.post("/enqueue", async (req, res) => {
         .from("queue_entries")
         .insert({
           queue_id: queue.id,
-          name,
+          shop_id: shop.id,
+          customer_name: name,
           number: nextNumber,
           status: "waiting",
           notify_token: newNotifyToken
         })
-        .select()
+        .select('id, number, status, notify_token')
         .single();
 
       if (insertErr) {

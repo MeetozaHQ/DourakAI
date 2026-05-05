@@ -144,7 +144,7 @@ const CustomerQueue = () => {
       if (stored?.id && stored?.notifyToken) {
         const { data: e, error: eErr } = await supabase
           .from('queue_entries')
-          .select('*')
+          .select('id, number, customer_name, status, notify_token')
           .eq('id', stored.id)
           .eq('notify_token', stored.notifyToken)
           .maybeSingle();
@@ -198,7 +198,7 @@ const CustomerQueue = () => {
     if (currentEntry) {
       const { data: e } = await supabase
         .from('queue_entries')
-        .select('*')
+        .select('id, number, customer_name, status, notify_token')
         .eq('id', currentEntry.id)
         .maybeSingle();
       
@@ -276,12 +276,13 @@ const CustomerQueue = () => {
           .from('queue_entries')
           .insert({
             queue_id: queue.id,
-            name: name.trim(),
+            shop_id: shop.id,
+            customer_name: name.trim(),
             number: nextNumber,
             status: "waiting",
             notify_token: newNotifyToken
           })
-          .select()
+          .select('id, number, status, notify_token')
           .single();
 
         if (insertErr) throw insertErr;

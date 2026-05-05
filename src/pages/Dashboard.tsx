@@ -145,7 +145,7 @@ const Dashboard = () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const { data } = await supabase
       .from("queue_entries")
-      .select("*")
+      .select("id, number, customer_name, status, joined_at, served_at")
       .eq("shop_id", sid)
       .eq("queue_id", qid)
       .gte("joined_at", today.toISOString())
@@ -191,7 +191,7 @@ const Dashboard = () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const { data: fresh } = await supabase
       .from("queue_entries")
-      .select("*")
+      .select("id, number, customer_name, status, joined_at, served_at")
       .eq("queue_id", queue.id)
       .gte("joined_at", today.toISOString())
       .in("status", ["waiting", "serving"])
