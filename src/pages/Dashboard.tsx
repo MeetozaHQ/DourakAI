@@ -8,9 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
 import { QRCodeSVG } from "qrcode.react";
-import { Clock, Users, CheckCircle2, Activity, LogOut, RefreshCw, Copy, Download, ExternalLink, Sparkles, ChevronLeft, Crown, Lock, Palette, FileText, FileImage, FileCode, Plus, Trash2, Pencil, Building2, UserPlus, X, Check } from "lucide-react";
+import { Clock, Users, CheckCircle2, Activity, LogOut, RefreshCw, Copy, Download, ExternalLink, Sparkles, ChevronLeft, Crown, Lock, Palette, FileText, FileImage, FileCode, Plus, Trash2, Pencil, Building2, UserPlus, X, Check, BarChart3, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { hasFeature, PlanId, planForFeature, PLANS } from "@/lib/plans";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import Papa from "papaparse";
 
 type Shop = { id: string; name: string; slug: string; plan: string; brand_color: string | null; logo_url: string | null; description: string | null; daily_limit: number | null };
 type Queue = { id: string; name: string; current_serving: number; slug: string; branch_id: string | null };
@@ -20,7 +23,7 @@ const Dashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const section = searchParams.get("section"); // null | "branding" | "branches" | "staff"
+  const section = searchParams.get("section"); // null | "branding" | "branches" | "staff" | "reports"
   const [shop, setShop] = useState<Shop | null>(null);
   const [queues, setQueues] = useState<Queue[]>([]);
   const [queue, setQueue] = useState<Queue | null>(null);
@@ -508,6 +511,14 @@ const Dashboard = () => {
             label="إضافة موظف"
             requiredPlan={!hasFeature(shop.plan as PlanId, "staff_accounts") ? "الأعمال" : undefined}
           />
+          <DashNavLink
+            active={section === "reports"}
+            disabled={!hasFeature(shop.plan as PlanId, "exports")}
+            onClick={() => setSearchParams({ section: "reports" })}
+            icon={<BarChart3 className="w-3.5 h-3.5" />}
+            label="التقارير"
+            requiredPlan={!hasFeature(shop.plan as PlanId, "exports") ? "الأعمال" : undefined}
+          />
         </div>
       </header>
 
@@ -518,6 +529,8 @@ const Dashboard = () => {
           <BranchesSection shop={shop} />
         ) : section === "staff" ? (
           <StaffSection shop={shop} />
+        ) : section === "reports" ? (
+          <ReportsSection shop={shop} />
         ) : (
           <>
             {/* Stats */}
@@ -1526,6 +1539,231 @@ const StaffSection = ({ shop }: { shop: Shop }) => {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============== Reports (Business) ==============
+const ReportsSection = ({ shop }: { shop: Shop }) => {
+  const navigate = useNavigate();
+  const unlocked = hasFeature(shop.plan as PlanId, "exports");
+  const [loading, setLoading] = useState(false);
+  const [queues, setQueues] = useState<Queue[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedQueue, setSelectedQueue] = useState<string>("all");
+  const [selectedBranch, setSelectedBranch] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    end: new Date().toISOString().split("T")[0]
+  });
+
+  const loadMetaData = async () => {
+    if (!unlocked) return;
+    const [{ data: q }, { data: b }] = await Promise.all([
+      supabase.from("queues").select("*").eq("shop_id", shop.id),
+      supabase.from("branches").select("*").eq("shop_id", shop.id),
+    ]);
+    setQueues((q ?? []) as Queue[]);
+    setBranches((b ?? []) as Branch[]);
+  };
+
+  useEffect(() => { void loadMetaData(); }, [shop.id, unlocked]);
+
+  const fetchEntries = async () => {
+    let query = supabase
+      .from("queue_entries")
+      .select(`
+        id, number, customer_name, status, joined_at, served_at, done_at,
+        queues (name)
+      `)
+      .eq("shop_id", shop.id)
+      .gte("joined_at", `${dateRange.start}T00:00:00`)
+      .lte("joined_at", `${dateRange.end}T23:59:59`);
+
+    if (selectedQueue !== "all") query = query.eq("queue_id", selectedQueue);
+
+    const { data, error } = await query.order("joined_at", { ascending: false });
+
+    if (error) throw error;
+    // Cast to help TS understand the join structure
+    return (data || []) as unknown as Array<Entry & { done_at: string | null; queues: { name: string } | null }>;
+  };
+
+  const exportCSV = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchEntries();
+      if (data.length === 0) { toast.info("لا توجد بيانات للفترة المحددة"); return; }
+
+      const rows = data.map(e => ({
+        "الرقم": e.number,
+        "الاسم": e.customer_name || "زبون",
+        "الحالة": e.status === "done" ? "منتهي" : e.status === "serving" ? "يُخدم" : "ينتظر",
+        "تاريخ الانضمام": new Date(e.joined_at).toLocaleString("ar-EG"),
+        "وقت الخدمة": e.served_at ? new Date(e.served_at).toLocaleTimeString("ar-EG") : "—",
+        "وقت الانتهاء": e.done_at ? new Date(e.done_at).toLocaleTimeString("ar-EG") : "—",
+        "الطابور": e.queues?.name || "—"
+      }));
+
+      const csv = Papa.unparse(rows);
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `report-${shop.slug}-${dateRange.start}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      toast.error("فشل تصدير CSV");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportPDF = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchEntries();
+      if (data.length === 0) { toast.info("لا توجد بيانات للفترة المحددة"); return; }
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      
+      // Basic styling for RTL (Simplified since jspdf default fonts don't support Arabic well without extra files)
+      // We'll use latin characters for titles or try a basic approach
+      doc.setFontSize(20);
+      doc.text(`Queue Report: ${shop.name}`, 105, 15, { align: "center" });
+      doc.setFontSize(10);
+      doc.text(`From: ${dateRange.start} To: ${dateRange.end}`, 105, 22, { align: "center" });
+
+      const tableData = data.map(e => [
+        e.number.toString(),
+        e.customer_name || "Guest",
+        e.status,
+        new Date(e.joined_at).toLocaleDateString(),
+        e.served_at ? new Date(e.served_at).toLocaleTimeString() : "-",
+        e.queues?.name || "-"
+      ]);
+
+      // @ts-expect-error - jspdf-autotable adds autoTable to jsPDF instance
+      doc.autoTable({
+        startY: 30,
+        head: [['#', 'Customer', 'Status', 'Date', 'Served At', 'Queue']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [99, 102, 241] }, // Indigo primary color
+      });
+
+      doc.save(`report-${shop.slug}-${dateRange.start}.pdf`);
+    } catch (err) {
+      console.error(err);
+      toast.error("فشل تصدير PDF");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface relative overflow-hidden">
+      {!unlocked && (
+        <div className="absolute inset-0 bg-surface-card/70 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-3 cursor-pointer" onClick={() => navigate("/pricing")}>
+          <div className="bg-warning/10 text-warning rounded-full p-3"><Lock className="w-6 h-6" /></div>
+          <div className="text-surface-fg font-bold">التقارير المتقدمة</div>
+          <div className="text-xs text-surface-muted">متاح في باقة <span className="text-primary font-bold">الأعمال</span></div>
+          <Button size="sm" className="bg-gradient-gold text-foreground rounded-full mt-1 font-bold">رقّ لباقة الأعمال</Button>
+        </div>
+      )}
+      <div className={!unlocked ? "opacity-30 pointer-events-none" : ""}>
+        <div className="flex items-center gap-2 mb-2">
+          <BarChart3 className="w-5 h-5 text-primary" />
+          <h2 className="text-xl font-black text-surface-fg">تصدير التقارير</h2>
+        </div>
+        <p className="text-xs text-surface-muted mb-6">
+          صدّر سجل الطابور بالكامل للفترة المحددة لتحليل أداء وفروع محلّك
+        </p>
+
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-surface-fg flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> من تاريخ
+            </label>
+            <Input 
+              type="date" 
+              value={dateRange.start} 
+              onChange={e => setDateRange(prev => ({...prev, start: e.target.value}))}
+              className="bg-surface-muted border-surface rounded-xl text-sm" 
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-surface-fg flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> إلى تاريخ
+            </label>
+            <Input 
+              type="date" 
+              value={dateRange.end} 
+              onChange={e => setDateRange(prev => ({...prev, end: e.target.value}))}
+              className="bg-surface-muted border-surface rounded-xl text-sm" 
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-surface-fg">المكان / الفرع</label>
+            <select 
+              value={selectedBranch}
+              onChange={e => setSelectedBranch(e.target.value)}
+              className="w-full bg-surface-muted text-surface-fg text-sm rounded-xl border border-surface h-10 px-3"
+            >
+              <option value="all">كل الفروع</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-surface-fg">الطابور</label>
+            <select 
+              value={selectedQueue}
+              onChange={e => setSelectedQueue(e.target.value)}
+              className="w-full bg-surface-muted text-surface-fg text-sm rounded-xl border border-surface h-10 px-3"
+            >
+              <option value="all">كل الطوابير</option>
+              {queues.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Button 
+            disabled={loading}
+            onClick={exportCSV} 
+            variant="outline" 
+            className="h-24 rounded-3xl border-2 border-dashed border-surface hover:border-primary hover:bg-primary/5 transition-all flex-col gap-2 group"
+          >
+            <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+              <FileCode className="w-5 h-5" />
+            </div>
+            <div className="font-black">تصدير CSV (Excel)</div>
+            <div className="text-[10px] text-surface-muted italic">مناسب للتحليل الرقمي</div>
+          </Button>
+
+          <Button 
+            disabled={loading}
+            onClick={exportPDF} 
+            variant="outline" 
+            className="h-24 rounded-3xl border-2 border-dashed border-surface hover:border-success hover:bg-success/5 transition-all flex-col gap-2 group"
+          >
+            <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center group-hover:bg-success group-hover:text-white transition-colors">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div className="font-black">تصدير PDF (بي دي إف)</div>
+            <div className="text-[10px] text-surface-muted italic">مناسب للطباعة والمشاركة</div>
+          </Button>
+        </div>
+
+        {loading && (
+          <div className="mt-6 flex items-center justify-center gap-2 text-primary font-bold animate-pulse">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span>جارٍ استخراج البيانات...</span>
           </div>
         )}
       </div>
