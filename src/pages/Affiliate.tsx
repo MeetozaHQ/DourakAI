@@ -203,7 +203,7 @@ const Affiliate = () => {
   const url = `${window.location.origin}/signup?ref=${shopId || code}`;
 
   return (
-    <div className="bg-surface min-h-screen font-sans" dir="rtl">
+    <div className="bg-surface min-h-screen" dir="rtl">
       <header className="bg-surface-card border-b border-surface px-6 py-4 sticky top-0 z-50 backdrop-blur-md bg-surface-card/80">
         <div className="container mx-auto flex items-center justify-between max-w-4xl">
           <Button variant="ghost" onClick={() => navigate("/dashboard")} className="text-surface-fg/70 hover:bg-surface-muted gap-2 rounded-xl">
