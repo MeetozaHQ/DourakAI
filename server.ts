@@ -69,6 +69,10 @@ async function getPaymentKey(token: string, orderId: string, amount: number, cus
 
 // --- API Routes ---
 
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString() });
+});
+
 app.post("/api/pay/initiate", async (req, res) => {
   try {
     const { shopId, amount, customer } = req.body;
@@ -238,8 +242,10 @@ app.post("/api/queue", async (req, res) => {
     if (action === "join") {
       if (!name) return res.status(400).json({ error: "الاسم مطلوب" });
 
+      console.log(`[QueueAPI] Join for shop: ${shop.id}, queue: ${queue.id}, name: ${name}`);
+
       // Get next number
-      const { data: lastEntry } = await supabaseAdmin
+      const { data: lastEntry, error: lastEntryErr } = await supabaseAdmin
         .from("queue_entries")
         .select("number")
         .eq("queue_id", queue.id)
@@ -247,8 +253,15 @@ app.post("/api/queue", async (req, res) => {
         .limit(1)
         .maybeSingle();
 
+      if (lastEntryErr) {
+        console.error("[QueueAPI] Error getting last entry:", lastEntryErr);
+        throw lastEntryErr;
+      }
+
       const nextNumber = (lastEntry?.number || 0) + 1;
-      const newNotifyToken = crypto.randomUUID();
+      const newNotifyToken = crypto.randomBytes(16).toString("hex");
+
+      console.log(`[QueueAPI] Inserting new entry: #${nextNumber}`);
 
       const { data: newEntry, error: insertErr } = await supabaseAdmin
         .from("queue_entries")
@@ -262,7 +275,12 @@ app.post("/api/queue", async (req, res) => {
         .select()
         .single();
 
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        console.error("[QueueAPI] Insert error:", insertErr);
+        throw insertErr;
+      }
+
+      console.log(`[QueueAPI] Join success: ${newEntry.id}`);
 
       const { data: entries } = await supabaseAdmin
         .from("queue_entries")
@@ -315,5 +333,13 @@ async function start() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
 
 start();

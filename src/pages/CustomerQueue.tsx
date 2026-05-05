@@ -216,6 +216,7 @@ const CustomerQueue = () => {
 
   const join = async () => {
     if (!slug || !name.trim()) { toast.error("أدخل اسمك أولاً"); return; }
+    console.log(`[CustomerQueue] Joining queue for slug: ${slug}, name: ${name.trim()}`);
     setLoading(true);
     try {
       try { if (typeof Notification !== "undefined" && Notification.permission === "default") await Notification.requestPermission(); } catch (e) { console.debug(e); }
@@ -232,8 +233,21 @@ const CustomerQueue = () => {
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || "فشل الاتصال بالخدمة");
+        let errorMsg = "فشل الاتصال بالخدمة";
+        const status = response.status;
+        try {
+          const text = await response.text();
+          try {
+            const err = JSON.parse(text);
+            errorMsg = err.error || errorMsg;
+          } catch (e) {
+            console.debug("Non-JSON error response:", text);
+            errorMsg = `خطأ في الخادم (${status})`;
+          }
+        } catch (e) {
+          errorMsg = `خطأ في الاتصال (${status})`;
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
