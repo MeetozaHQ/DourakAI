@@ -33,13 +33,46 @@ const Pricing = () => {
       toast.success("تم التفعيل");
       return;
     }
-    await supabase.from("subscriptions").insert({
-      shop_id: shopId,
-      plan: planId,
-      amount: PLANS[planId].price,
-      status: "pending",
-    });
-    toast.info("📞 تواصل معنا على واتساب لتفعيل الباقة (الدفع سيتوفر قريباً عبر Paymob)");
+
+    try {
+      toast.loading("جاري تجهيز بوابة الدفع...");
+      
+      const response = await fetch("/api/pay/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shopId,
+          amount: PLANS[planId].price,
+          customer: {
+            email: user?.email,
+            first_name: user?.user_metadata?.full_name || "Merchant",
+            phone: "01000000000" // Should ideally be collected or from profile
+          }
+        })
+      });
+
+      const data = await response.json();
+      toast.dismiss();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Failed to get payment URL");
+      }
+    } catch (error: unknown) {
+      toast.dismiss();
+      console.error("Payment error:", error);
+      toast.error("حدث خطأ أثناء الاتصال ببوابة الدفع. يرجى تزويدنا بمفاتيح Paymob في الإعدادات.");
+      
+      // Fallback to manual
+      await supabase.from("subscriptions").insert({
+        shop_id: shopId,
+        plan: planId,
+        amount: PLANS[planId].price,
+        status: "pending",
+      });
+      toast.info("📞 يمكنك التواصل معنا على واتساب للتفعيل اليدوي أيضاً");
+    }
   };
 
   return (

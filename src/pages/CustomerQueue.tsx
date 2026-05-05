@@ -47,9 +47,16 @@ const requestWithRetry = async <T,>(factory: () => PromiseLike<{ data: T; error:
 };
 
 const callCustomerQueue = async (body: Record<string, unknown>) => {
-  const data = await requestWithRetry<QueueResponse>(() => supabase.functions.invoke("customer-queue", { body }));
-  if (data?.error) throw new Error(data.error);
-  return data;
+  const response = await fetch("/api/queue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || "فشل الاتصال بالخدمة");
+  }
+  return response.json();
 };
 
 const CustomerQueue = () => {
