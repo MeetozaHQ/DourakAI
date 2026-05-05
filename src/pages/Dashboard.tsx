@@ -1644,21 +1644,25 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
       element.style.backgroundColor = "white";
       element.style.color = "black";
       element.style.direction = "rtl";
-      element.style.fontFamily = "'Cairo', sans-serif";
-
+      
+      // Inject font import directly into the element to ensure connectivity
       element.innerHTML = `
-        <div style="padding: 20px;">
-          <h1 style="text-align:center; font-size: 28px; margin-bottom: 10px; color: #1e1b4b;">تقرير الطابور: ${shop.name}</h1>
-          <p style="text-align:center; font-size: 16px; color: #64748b; margin-bottom: 30px;">الفترة من ${dateRange.start} إلى ${dateRange.end}</p>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+          * { font-family: 'Cairo', sans-serif !important; letter-spacing: 0 !important; }
+        </style>
+        <div style="padding: 20px; direction: rtl; text-align: center;">
+          <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 5px; color: #1e1b4b; display: inline-block; direction: rtl;">تقرير الطابور: ${shop.name}</h1>
+          <p style="font-size: 16px; color: #64748b; margin-bottom: 30px; direction: rtl;">الفترة من ${dateRange.start} إلى ${dateRange.end}</p>
           
-          <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-            <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
-              <div style="font-size: 12px; color: #64748b;">إجمالي الزبائن</div>
-              <div style="font-size: 24px; font-weight: bold; color: #6366f1;">${data.length}</div>
+          <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 30px;">
+            <div style="background: #f8fafc; padding: 15px 40px; border-radius: 16px; border: 1px solid #e2e8f0; min-width: 200px;">
+              <div style="font-size: 14px; color: #64748b;">إجمالي الزبائن</div>
+              <div style="font-size: 32px; font-weight: bold; color: #6366f1;">${data.length}</div>
             </div>
           </div>
 
-          <table style="width: 100%; border-collapse: collapse;">
+          <table style="width: 100%; border-collapse: collapse; direction: rtl;">
             <thead>
               <tr style="background-color: #6366f1; color: white;">
                 <th style="padding: 12px; border: 1px solid #e2e8f0; text-align: right;">#</th>
@@ -1673,25 +1677,29 @@ const ReportsSection = ({ shop }: { shop: Shop }) => {
                 <tr style="background-color: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
                   <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold;">${e.number}</td>
                   <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.customer_name || "زبون"}</td>
-                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.status === 'done' ? 'مكتمل' : e.status === 'serving' ? 'الآن' : 'ينتظر'}</td>
+                  <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.status === 'done' ? 'مكتمل' : e.status === 'serving' ? 'يُخدم' : 'ينتظر'}</td>
                   <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${new Date(e.joined_at).toLocaleString('ar-EG')}</td>
                   <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">${e.queues?.name || "—"}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
-          <div style="margin-top: 40px; text-align: center; font-size: 10px; color: #94a3b8;">
+          <div style="margin-top: 50px; text-align: center; font-size: 12px; color: #94a3b8; direction: rtl;">
             تم استخراج هذا التقرير عبر منصة دَوْرَك Dourak
           </div>
         </div>
       `;
       document.body.appendChild(element);
 
+      // Give a small delay for fonts to ensure they are ready
+      await new Promise(r => setTimeout(r, 500));
+
       const canvas = await html2canvas(element, { 
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: "white"
+        backgroundColor: "white",
+        allowTaint: true
       });
       
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
