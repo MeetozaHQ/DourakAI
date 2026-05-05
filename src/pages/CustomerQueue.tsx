@@ -13,51 +13,7 @@ type Entry = { id: string; number: number; status: string; notify_token: string 
 type QueueResponse = { shop: Shop; queue: Queue; entry: Entry | null; entries: Entry[]; error?: string };
 
 const STORAGE_KEY = "dourak_entry";
-const RETRYABLE_CODES = new Set(["PGRST001", "PGRST002", "PGRST003"]);
 const TEMPORARY_LOAD_ERROR = "الخدمة تستغرق وقتاً أطول من المعتاد. سنعيد المحاولة تلقائياً خلال ثوانٍ.";
-
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const withTimeout = async <T,>(request: PromiseLike<T>, ms = 7000): Promise<T> => {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error("انتهت مهلة الاتصال بالخدمة")), ms);
-  });
-  try {
-    return await Promise.race([Promise.resolve(request), timeout]);
-  } finally {
-    clearTimeout(timeoutId!);
-  }
-};
-
-const requestWithRetry = async <T,>(factory: () => PromiseLike<{ data: T; error: unknown }>, attempts = 8) => {
-  let lastError: unknown = null;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const { data, error } = await withTimeout(factory());
-    if (!error) return data;
-    lastError = error;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const errObj = error as any;
-    const status = errObj?.status ?? errObj?.code;
-    const retryable = RETRYABLE_CODES.has(errObj?.code) || status === 503 || /schema cache|Retrying|connection|timeout|مهلة/i.test(errObj?.message ?? "");
-    if (!retryable || attempt === attempts - 1) break;
-    await wait(900 * (attempt + 1));
-  }
-  throw lastError ?? new Error("تعذّر الاتصال بالخدمة");
-};
-
-const callCustomerQueue = async (body: Record<string, unknown>) => {
-  const response = await fetch("/api/queue", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error || "فشل الاتصال بالخدمة");
-  }
-  return response.json();
-};
 
 const CustomerQueue = () => {
   const { slug, queueSlug } = useParams<{ slug: string; queueSlug?: string }>();
@@ -79,7 +35,6 @@ const CustomerQueue = () => {
   useEffect(() => { queueIdRef.current = queue?.id ?? null; }, [queue?.id]);
 
   useEffect(() => {
-    // Always start with a clean slate for each visitor / slug change
     setName("");
     setEntry(null);
     void loadShop();
@@ -117,20 +72,18 @@ const CustomerQueue = () => {
     const ch = supabase
       .channel(`q-${queue.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "queue_entries", filter: `queue_id=eq.${queue.id}` }, () => refreshEntries())
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "queues", filter: `id=eq.${queue.id}` }, (p: any) => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "queues", filter: `id=eq.${queue.id}` }, (p: { new: { current_serving: number } }) => {
         setQueue(prev => prev ? { ...prev, current_serving: p.new.current_serving } : prev);
       })
       .subscribe();
-    // Safety net: poll every 4s in case realtime drops
     const poll = setInterval(() => { void refreshEntries(); }, 4000);
     return () => { supabase.removeChannel(ch); clearInterval(poll); };
   }, [queue?.id]);
 
-  // Notification & vibration when it's our turn or close
+  // Notification & vibration logic
   useEffect(() => {
     if (!entry || !queue) return;
-        if (entry.status === "serving" && !notifiedRef.current) {
+    if (entry.status === "serving" && !notifiedRef.current) {
       notifiedRef.current = true;
       try { navigator.vibrate?.([400, 120, 400, 120, 400, 120, 800]); } catch (e) { console.debug(e); }
       try {
@@ -139,19 +92,21 @@ const CustomerQueue = () => {
         }
       } catch (e) { console.debug(e); }
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const playBeep = (delay: number) => setTimeout(() => {
-          const o = ctx.createOscillator(); const g = ctx.createGain();
-          o.connect(g); g.connect(ctx.destination);
-          o.frequency.value = 880; g.gain.value = 0.3;
-          o.start(); setTimeout(() => o.stop(), 350);
-        }, delay);
-        playBeep(0); playBeep(500); playBeep(1000);
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          const ctx = new AudioContextClass();
+          const playBeep = (delay: number) => setTimeout(() => {
+            const o = ctx.createOscillator(); const g = ctx.createGain();
+            o.connect(g); g.connect(ctx.destination);
+            o.frequency.value = 880; g.gain.value = 0.3;
+            o.start(); setTimeout(() => o.stop(), 350);
+          }, delay);
+          playBeep(0); playBeep(500); playBeep(1000);
+        }
       } catch (e) { console.debug(e); }
     }
-    const ahead = entry.number - queue.current_serving;
-    if (entry.status === "waiting" && ahead === 1 && !aboutToBeNextRef.current) {
+    const aheadCount = entry.number - queue.current_serving;
+    if (entry.status === "waiting" && aheadCount === 1 && !aboutToBeNextRef.current) {
       aboutToBeNextRef.current = true;
       try { navigator.vibrate?.(250); } catch (e) { console.debug(e); }
     }
@@ -164,28 +119,58 @@ const CustomerQueue = () => {
     setInitialLoading(true);
     setLoadError(null);
     try {
+      // 1. Get Shop
+      const { data: shopData, error: shopErr } = await supabase.from('shops').select('*').eq('slug', slug).maybeSingle();
+      if (shopErr) throw shopErr;
+      if (!shopData) { setLoadError("المحل غير موجود"); return; }
+      setShop(shopData as Shop);
+
+      // 2. Get Queue
+      let queueQuery = supabase.from('queues').select('*').eq('shop_id', shopData.id).eq('active', true);
+      if (queueSlug) {
+        queueQuery = queueQuery.eq('slug', queueSlug);
+      } else {
+        queueQuery = queueQuery.order('created_at', { ascending: true }).limit(1);
+      }
+      const { data: qList, error: qErr } = await queueQuery;
+      if (qErr) throw qErr;
+      const queueData = qList?.[0];
+      if (!queueData) { setLoadError("لا يوجد طابور نشط حالياً"); return; }
+      setQueue(queueData as Queue);
+
+      // 3. Get Entry from Storage
       const raw = localStorage.getItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
       const stored = raw ? JSON.parse(raw) : null;
-      const data = await callCustomerQueue({ action: "get", slug, queueSlug, entryId: stored?.id, notifyToken: stored?.notifyToken });
-      if (attemptId !== loadAttemptRef.current) return;
-      setShop(data.shop);
-      setQueue(data.queue);
-      setAllEntries(data.entries ?? []);
-      if (data.entry) setEntry(data.entry);
-      else localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
+      if (stored?.id && stored?.notifyToken) {
+        const { data: e, error: eErr } = await supabase
+          .from('queue_entries')
+          .select('*')
+          .eq('id', stored.id)
+          .eq('notify_token', stored.notifyToken)
+          .maybeSingle();
+        if (!eErr && e && (e.status === 'waiting' || e.status === 'serving')) {
+          setEntry(e as Entry);
+        } else {
+          localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
+        }
+      }
+
+      // 4. Get All Entries
+      const { data: entries, error: entriesErr } = await supabase
+        .from('queue_entries')
+        .select('id, number, status')
+        .eq('queue_id', queueData.id)
+        .in('status', ['waiting', 'serving'])
+        .order('number', { ascending: true });
+      if (entriesErr) throw entriesErr;
+      setAllEntries(entries as Entry[]);
+
     } catch (e: unknown) {
       if (attemptId === loadAttemptRef.current) {
-        let msg = TEMPORARY_LOAD_ERROR;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const anyE = e as { context?: { error?: string }; message?: string };
-        if (anyE?.context && typeof anyE.context === 'object' && anyE.context.error) {
-          msg = anyE.context.error;
-        } else {
-          msg = anyE.message || "فشل الاتصال بالخدمة (الخادم)";
-        }
-        setLoadError(msg);
+        const anyE = e as { message?: string };
+        setLoadError(anyE.message || "حدث خطأ غير متوقع");
       }
-      console.error("[CustomerQueue] Error loading shop:", e);
+      console.error("[CustomerQueue] Load Error:", e);
     } finally {
       if (attemptId === loadAttemptRef.current) setInitialLoading(false);
     }
@@ -193,64 +178,70 @@ const CustomerQueue = () => {
 
   const refreshEntries = async () => {
     const qid = queueIdRef.current;
-    if (!qid || !slug) return;
+    if (!qid) return;
+    
+    // Refresh queue state
+    const { data: q } = await supabase.from('queues').select('current_serving').eq('id', qid).maybeSingle();
+    if (q) setQueue(prev => prev ? { ...prev, current_serving: q.current_serving } : null);
+
+    // Refresh all waiting/serving entries
+    const { data: entries } = await supabase
+      .from('queue_entries')
+      .select('id, number, status')
+      .eq('queue_id', qid)
+      .in('status', ['waiting', 'serving'])
+      .order('number', { ascending: true });
+    if (entries) setAllEntries(entries as Entry[]);
+
+    // Refresh our own entry
     const currentEntry = entryRef.current;
-    const data = await callCustomerQueue({
-      action: "get",
-      slug,
-      queueSlug,
-      entryId: currentEntry?.id,
-      notifyToken: currentEntry?.notify_token,
-    }).catch(() => null);
-    if (!data) return;
-    setAllEntries(data.entries ?? []);
-    if (data.queue) setQueue(prev => prev ? { ...prev, current_serving: data.queue.current_serving } : data.queue);
     if (currentEntry) {
-      // The edge function only returns entry if still waiting/serving
-      if (data.entry) {
-        setEntry(data.entry);
-      } else {
-        // Our entry was removed. Was it served (done) or just left?
-        // We check the specific entry status directly to be sure
-        const { data: check } = await supabase
-          .from("queue_entries")
-          .select("status")
-          .eq("id", currentEntry.id)
-          .maybeSingle();
-        
-        if (check?.status === "done") {
-          setShowThankYou(true);
+      const { data: e } = await supabase
+        .from('queue_entries')
+        .select('*')
+        .eq('id', currentEntry.id)
+        .maybeSingle();
+      
+      if (e) {
+        if (e.status === 'waiting' || e.status === 'serving') {
+          setEntry(e as Entry);
+        } else {
+          if (e.status === 'done') setShowThankYou(true);
+          setEntry(null);
+          localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
         }
-        
-        setEntry(null);
-        localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
       }
     }
   };
 
   const join = async () => {
-    if (!queue || !shop || !name.trim()) {
-      toast.error("اكتب اسمك أولاً");
-      return;
-    }
+    if (!slug || !name.trim()) { toast.error("أدخل اسمك أولاً"); return; }
     setLoading(true);
     try {
-      // Request notification permission BEFORE join (needs user gesture)
       try { if (typeof Notification !== "undefined" && Notification.permission === "default") await Notification.requestPermission(); } catch (e) { console.debug(e); }
-      const data = await callCustomerQueue({ action: "join", slug, queueSlug, name: name.trim() });
+      
+      const { data, error } = await supabase.rpc('join_queue', {
+        p_slug: slug,
+        p_name: name.trim(),
+        p_queue_slug: queueSlug || null
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
       setShop(data.shop);
       setQueue(data.queue);
-      setAllEntries(data.entries ?? []);
       setEntry(data.entry as Entry);
       notifiedRef.current = false;
       aboutToBeNextRef.current = false;
-      localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: data.entry?.id, notifyToken: data.entry?.notify_token }));
-      toast.success(`تم تسجيلك! رقمك ${data.entry?.number}`);
+      localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: data.entry.id, notifyToken: data.entry.notify_token }));
+      toast.success(`تم تسجيلك! رقمك ${data.entry.number}`);
+      
+      void refreshEntries();
     } catch (e: unknown) {
       console.error("[CustomerQueue] Join error:", e);
       const anyE = e as { message?: string };
-      const msg = anyE?.message || "تعذّر الحجز مؤقتاً، حاول مرة أخرى";
-      toast.error(msg);
+      toast.error(anyE.message || "تعذّر الحجز، حاول مرة أخرى");
     } finally {
       setLoading(false);
     }
@@ -258,11 +249,12 @@ const CustomerQueue = () => {
 
   const leave = async () => {
     if (!entry) return;
-    await callCustomerQueue({ action: "leave", slug, queueSlug, entryId: entry.id, notifyToken: entry.notify_token }).catch(() => null);
+    await supabase.from('queue_entries').update({ status: 'left', left_at: new Date().toISOString() }).eq('id', entry.id);
     setEntry(null);
     localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
     toast.info("غادرت الطابور");
   };
+
 
   if (initialLoading) {
     return (
