@@ -220,22 +220,33 @@ const CustomerQueue = () => {
     try {
       try { if (typeof Notification !== "undefined" && Notification.permission === "default") await Notification.requestPermission(); } catch (e) { console.debug(e); }
       
-      const { data, error } = await supabase.rpc('join_queue', {
-        p_slug: slug,
-        p_name: name.trim(),
-        p_queue_slug: queueSlug || null
+      const response = await fetch("/api/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "join",
+          slug,
+          queueSlug,
+          name: name.trim()
+        })
       });
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "فشل الاتصال بالخدمة");
+      }
 
+      const data = await response.json();
       setShop(data.shop);
       setQueue(data.queue);
       setEntry(data.entry as Entry);
       notifiedRef.current = false;
       aboutToBeNextRef.current = false;
-      localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: data.entry.id, notifyToken: data.entry.notify_token }));
-      toast.success(`تم تسجيلك! رقمك ${data.entry.number}`);
+      
+      if (data.entry) {
+        localStorage.setItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`, JSON.stringify({ id: data.entry.id, notifyToken: data.entry.notify_token }));
+        toast.success(`تم تسجيلك! رقمك ${data.entry.number}`);
+      }
       
       void refreshEntries();
     } catch (e: unknown) {
@@ -249,7 +260,20 @@ const CustomerQueue = () => {
 
   const leave = async () => {
     if (!entry) return;
-    await supabase.from('queue_entries').update({ status: 'left', left_at: new Date().toISOString() }).eq('id', entry.id);
+    try {
+      await fetch("/api/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "leave",
+          slug: slug || "",
+          entryId: entry.id,
+          notifyToken: entry.notify_token
+        })
+      });
+    } catch (err) {
+      console.error("Leave error:", err);
+    }
     setEntry(null);
     localStorage.removeItem(`${STORAGE_KEY}-${slug}-${queueSlug ?? "default"}`);
     toast.info("غادرت الطابور");
