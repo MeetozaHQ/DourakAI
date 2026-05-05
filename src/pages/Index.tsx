@@ -65,7 +65,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Button
               size="lg"
-              onClick={() => navigate("/signup")}
+              onClick={() => navigate(`/signup${window.location.search}`)}
               className="bg-white text-background hover:bg-white/90 btn-glow text-base h-14 px-8 rounded-full font-bold gap-2"
             >
               ابدأ مجاناً الآن
@@ -215,7 +215,7 @@ const Index = () => {
                   </ul>
 
                   <Button
-                    onClick={() => navigate("/signup")}
+                    onClick={() => navigate(`/signup${window.location.search}`)}
                     className={`w-full rounded-full h-12 font-bold ${
                       featured
                         ? "bg-white text-primary hover:bg-white/90"
@@ -240,13 +240,13 @@ const Index = () => {
           </div>
           <h2 className="text-4xl md:text-5xl font-black mb-4">اكسب معنا!</h2>
           <p className="text-foreground/70 text-lg max-w-2xl mx-auto mb-12">
-            رشّح دَوْرَك لأصحاب المحلات واكسب عمولة ٢٠% على كل اشتراك — مدى الحياة.
+            رشّح دَوْرَك لأصحاب المحلات واكسب عمولة ١٥% على كل اشتراك.
           </p>
 
           <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto mb-10">
             {[
-              { icon: TrendingUp, label: "كل شهر", value: "دخل تلقائي" },
-              { icon: Wallet, label: "٢٠% عمولة", value: "على كل اشتراك" },
+              { icon: TrendingUp, label: "١٢ شهر", value: "دخل مستمر" },
+              { icon: Wallet, label: "١٥% عمولة", value: "على كل اشتراك" },
               { icon: UserPlus, label: "ابعت لينك", value: "وابدأ تكسب" },
             ].map((s, i) => (
               <div key={i} className="glass-card rounded-2xl p-5">

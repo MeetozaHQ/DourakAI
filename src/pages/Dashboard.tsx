@@ -341,7 +341,7 @@ const Dashboard = () => {
                 <div className="space-y-4">
                   {[
                     { icon: "📱", text: "الزبون يمسح QR" },
-                    { icon: "🔢", text: "يدخل رقم الإيصال" },
+                    { icon: "🔢", text: "يدخل اسمه أو رقم الايصال" },
                     { icon: "⏳", text: "يعرف دوره ويستنى برا" },
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-4 p-4 bg-surface-muted rounded-2xl border border-surface">

@@ -13,6 +13,7 @@ const Affiliate = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [code, setCode] = useState("");
+  const [shopId, setShopId] = useState("");
   const [stats, setStats] = useState({ count: 0, earnings: 0, monthly: 0 });
 
   useEffect(() => {
@@ -27,6 +28,10 @@ const Affiliate = () => {
   const load = async () => {
     const { data: profile } = await supabase.from("profiles").select("referral_code").eq("id", user!.id).maybeSingle();
     if (profile) setCode(profile.referral_code);
+
+    const { data: shop } = await supabase.from("shops").select("id").eq("owner_id", user!.id).limit(1).maybeSingle();
+    if (shop) setShopId(shop.id);
+
     const { data: refs } = await supabase.from("referrals").select("*").eq("referrer_id", user!.id);
     const list = refs ?? [];
     const month = new Date(); month.setDate(1); month.setHours(0, 0, 0, 0);
@@ -37,7 +42,7 @@ const Affiliate = () => {
     });
   };
 
-  const url = `${AFFILIATE_BASE_URL}/signup?ref=${code}`;
+  const url = `${window.location.origin}/signup?ref=${shopId || code}`;
 
   return (
     <div className="bg-surface min-h-screen" dir="rtl">
@@ -58,13 +63,13 @@ const Affiliate = () => {
           </div>
           <h1 className="text-4xl md:text-5xl font-black text-surface-fg mb-3">برنامج الشركاء</h1>
           <p className="text-surface-muted text-lg max-w-xl mx-auto">
-            رشّح محلات لدَوْرَك واكسب <span className="font-bold text-primary">٢٠% عمولة</span> على كل اشتراك — كل شهر، مدى الحياة.
+            رشّح محلات لدَوْرَك واكسب <span className="font-bold text-primary">١٥% عمولة</span> على كل اشتراك — شهرياً لمدة سنة كاملة.
           </p>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { icon: Gift, label: "نسبة العمولة", value: "٢٠%", color: "text-warning bg-warning/10" },
+            { icon: Gift, label: "نسبة العمولة", value: "١٥%", color: "text-warning bg-warning/10" },
             { icon: TrendingUp, label: "إجمالي الأرباح", value: `${stats.earnings} ج`, color: "text-primary bg-primary/10" },
             { icon: DollarSign, label: "أرباح هذا الشهر", value: `${stats.monthly} ج`, color: "text-success bg-success/10" },
             { icon: Users, label: "محلات رشحتها", value: stats.count, color: "text-accent bg-accent/10" },
@@ -79,46 +84,80 @@ const Affiliate = () => {
           ))}
         </div>
 
-        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface mb-6">
+        <div className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface mb-10">
           <div className="text-center mb-5">
             <h2 className="text-xl font-black text-surface-fg mb-1">رابطك الخاص</h2>
             <p className="text-sm text-surface-muted">شارك هذا الرابط مع أصحاب المحلات وابدأ تكسب</p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={() => { navigator.clipboard.writeText(url); toast.success("تم النسخ ✓"); }}
-              className="bg-gradient-primary text-primary-foreground rounded-full gap-2"
-            >
-              <Copy className="w-4 h-4" />
-              نسخ
-            </Button>
-            <div dir="ltr" className="flex-1 bg-surface-muted rounded-full px-5 py-3 text-sm font-mono text-surface-muted text-center truncate">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div dir="ltr" className="flex-1 bg-surface-muted rounded-2xl px-5 py-4 text-sm font-mono text-surface-fg border border-surface truncate flex items-center justify-center">
               {url}
             </div>
+            <Button
+              onClick={() => { navigator.clipboard.writeText(url); toast.success("تم النسخ ✓"); }}
+              className="bg-gradient-primary text-primary-foreground rounded-2xl h-14 px-8 font-bold gap-2 shadow-elegant"
+            >
+              <Copy className="w-4 h-4" />
+              نسخ الرابط
+            </Button>
           </div>
         </div>
 
-        <div className="bg-primary/5 border border-primary/20 rounded-3xl p-6">
-          <h3 className="text-xl font-black text-surface-fg mb-5 text-right">كيف يعمل البرنامج؟</h3>
-          <ol className="space-y-4">
-            {[
-              "شارك رابطك الخاص مع أصحاب المحلات في منطقتك",
-              "لما حد يشترك من خلال رابطك، تتسجل عمولة باسمك",
-              "تحصل على ٢٠% من قيمة اشتراكهم كل شهر تلقائياً",
-              "يتم تحويل الأرباح لحسابك في آخر كل شهر",
-            ].map((t, i) => (
-              <li key={i} className="flex items-center gap-3 text-surface-fg">
-                <div className="w-7 h-7 rounded-full bg-gradient-primary text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
-                  {i + 1}
-                </div>
-                <span>{t}</span>
-              </li>
-            ))}
-          </ol>
-          <div className="border-t border-primary/20 mt-6 pt-5 text-center text-sm text-surface-muted flex items-center justify-center gap-2">
-            <Phone className="w-4 h-4 text-destructive" />
-            للاستفسار عن البرنامج، تواصل معنا على واتساب
-          </div>
+        <div className="space-y-10">
+          <section>
+            <h2 className="text-2xl font-black text-surface-fg mb-6 text-right">الأرباح من الإحالات</h2>
+            <div className="bg-surface-card rounded-3xl border border-surface shadow-soft overflow-hidden">
+              <div className="p-6 border-b border-surface">
+                 <div className="grid grid-cols-3 gap-4 text-center">
+                   <div>
+                     <div className="text-xs text-surface-muted mb-1">عدد الإحالات</div>
+                     <div className="text-xl font-black text-surface-fg">{stats.count}</div>
+                   </div>
+                   <div>
+                     <div className="text-xs text-surface-muted mb-1">إجمالي الأرباح</div>
+                     <div className="text-xl font-black text-primary">{stats.earnings} ج</div>
+                   </div>
+                   <div>
+                     <div className="text-xs text-surface-muted mb-1">الحالة</div>
+                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 text-success text-[10px] font-bold">
+                       <TrendingUp className="w-3 h-3" /> نشط
+                     </div>
+                   </div>
+                 </div>
+              </div>
+              <div className="p-12 text-center text-surface-muted text-sm">
+                {stats.count === 0 ? "لا يوجد إحالات بعد. ابدأ بمشاركة رابطك!" : "سيظهر تفصيل كل إحالة هنا قريباً..."}
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-primary/5 border border-primary/20 rounded-3xl p-8">
+            <h3 className="text-2xl font-black text-surface-fg mb-6 text-right">كيف يعمل البرنامج؟</h3>
+            <div className="grid md:grid-cols-2 gap-8">
+              <ol className="space-y-6">
+                {[
+                  "شارك رابطك الخاص مع أصحاب المحلات في منطقتك",
+                  "لما حد يشترك من خلال رابطك، تتسجل إحالة باسمك",
+                  "لما المشترك يفعل باقة مدفوعة، هتحصل على عمولة ١٥%",
+                  "العمولة بتستمر لمدة ١٢ شهر من تاريخ اشتراك صاحب المحل",
+                ].map((t, i) => (
+                  <li key={i} className="flex items-start gap-4 text-surface-fg">
+                    <div className="w-8 h-8 rounded-full bg-gradient-primary text-white text-sm font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                      {i + 1}
+                    </div>
+                    <span className="font-medium text-lg leading-snug">{t}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="bg-surface-card rounded-2xl p-6 border border-primary/10 flex flex-col items-center justify-center text-center space-y-4">
+                 <Logo size="md" />
+                 <p className="text-sm text-surface-muted">هدفنا نكبر سوا، ونوصل دَوْرَك لكل مكان في مصر والوطن العربي. 🚀</p>
+                 <Button variant="outline" className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/10" onClick={() => window.open("https://wa.me/201035851931", "_blank")}>
+                   <Phone className="w-4 h-4" /> تواصل معنا
+                 </Button>
+              </div>
+            </div>
+          </section>
         </div>
       </main>
     </div>
