@@ -52,6 +52,20 @@ const Affiliate = () => {
     today: 0,
     month: 0
   });
+
+  const LEVELS = [
+    { name: "مبتدئ", min: 0, icon: "🌱", color: "bg-slate-100 text-slate-600", next: 3 },
+    { name: "مسوّق", min: 3, icon: "🔥", color: "bg-orange-100 text-orange-600", next: 10 },
+    { name: "محترف", min: 10, icon: "🚀", color: "bg-primary/10 text-primary", next: 25 },
+    { name: "خبير", min: 25, icon: "👑", color: "bg-amber-100 text-amber-600", next: null },
+  ];
+
+  const currentLevel = [...LEVELS].reverse().find(l => stats.count >= l.min) || LEVELS[0];
+  const nextLevel = LEVELS.find(l => l.min > stats.count);
+  const progress = nextLevel 
+    ? ((stats.count - currentLevel.min) / (nextLevel.min - currentLevel.min)) * 100
+    : 100;
+  const remaining = nextLevel ? nextLevel.min - stats.count : 0;
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ phone: "", name: "" });
   const [withdrawals, setWithdrawals] = useState<{
@@ -212,6 +226,57 @@ const Affiliate = () => {
                      </div>
                    </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Affiliate Level Tracker */}
+        <section className="mb-8">
+          <div className="bg-surface-card rounded-[2.5rem] p-8 shadow-soft border border-surface overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -ml-16 -mt-16" />
+            
+            <div className="relative z-10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                <div className="flex items-center gap-4">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-sm ${currentLevel.color}`}>
+                    {currentLevel.icon}
+                  </div>
+                  <div>
+                    <div className="text-sm text-surface-muted font-bold mb-1">المستوى الحالي</div>
+                    <div className="text-2xl font-black text-surface-fg flex items-center gap-2">
+                       {currentLevel.name}
+                       {nextLevel && <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">نشط</span>}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  {nextLevel ? (
+                    <div className="text-sm">
+                      <span className="text-surface-muted">باقي </span>
+                      <span className="font-black text-primary">{remaining} إحالة</span>
+                      <span className="text-surface-muted"> للوصول إلى </span>
+                      <span className="font-black text-surface-fg">{nextLevel.name}</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm font-black text-success">لقد وصلت لآخر مستوى! 👑</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="relative h-4 bg-surface-muted rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="absolute inset-y-0 right-0 bg-gradient-to-l from-primary to-primary/60 rounded-full"
+                />
+              </div>
+              
+              <div className="flex justify-between mt-2 text-[10px] font-black text-surface-muted uppercase tracking-widest px-1">
+                <span>{currentLevel.min} إحالة</span>
+                {nextLevel && <span>{nextLevel.min} إحالة</span>}
               </div>
             </div>
           </div>
