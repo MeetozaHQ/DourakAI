@@ -11,7 +11,7 @@ import { PLANS, PlanId } from "@/lib/plans";
 const Admin = () => {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
-  type ShopRow = { id: string; name: string; slug: string; plan: string; created_at: string };
+  type ShopRow = { id: string; name: string; slug: string; plan: string; created_at: string; owner_id: string };
   type Commission = {
     id: string;
     amount: number;
@@ -58,7 +58,32 @@ const Admin = () => {
         shop:shop_id (id, name, owner_id)
       `).order("created_at", { ascending: false }),
     ]);
-    setShops((s ?? []) as ShopRow[]);
+
+    const rawShops = (s ?? []) as ShopRow[];
+    
+    // Deduplicate shops by owner_id in frontend (keep most recent)
+    const uniqueShops = rawShops.reduce((acc, current) => {
+      const x = acc.find(item => item.owner_id === current.owner_id);
+      if (!x) {
+        return acc.concat([current]);
+      } else {
+        return acc;
+      }
+    }, [] as ShopRow[]);
+
+    // If there were duplicates, try to clean them up from DB (most recent stay)
+    if (rawShops.length > uniqueShops.length && isAdmin) {
+      const idsToDelete = rawShops
+        .filter(rs => !uniqueShops.some(us => us.id === rs.id))
+        .map(rs => rs.id);
+      
+      if (idsToDelete.length > 0) {
+        await supabase.from("shops").delete().in("id", idsToDelete);
+        console.log("Cleaned up duplicate shops from DB:", idsToDelete.length);
+      }
+    }
+
+    setShops(uniqueShops);
     setProfiles(p ?? []);
     setRefs(r ?? []);
     setCommissions(c ?? []);
