@@ -31,7 +31,8 @@ const Admin = () => {
     account_name: string;
     status: string;
     created_at: string;
-    shop?: { name: string; owner_id: string };
+    admin_note?: string;
+    shop?: { id: string; name: string; owner_id: string };
   }[]>([]);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ const Admin = () => {
       `).order("created_at", { ascending: false }),
       supabase.from("withdrawals").select(`
         *,
-        shop:shop_id (name, owner_id)
+        shop:shop_id (id, name, owner_id)
       `).order("created_at", { ascending: false }),
     ]);
     setShops((s ?? []) as ShopRow[]);
@@ -76,10 +77,32 @@ const Admin = () => {
     else { toast.success("تم التحديث"); void load(); }
   };
 
-  const setWithdrawalStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from("withdrawals").update({ status }).eq("id", id);
-    if (error) toast.error("تعذر تحديث الحالة");
-    else { toast.success("تم التحديث"); void load(); }
+  const setWithdrawalStatus = async (id: string, status: string, shopId?: string) => {
+    let note = "";
+    if (status === "paid") {
+      note = prompt("أضف ملاحظة (مثل رقم التحويل أو تم الإرسال):") || "";
+    } else if (status === "rejected") {
+      note = prompt("سبب الرفض:") || "";
+      if (!note) return;
+    }
+
+    const { error } = await supabase.from("withdrawals").update({ status, admin_note: note }).eq("id", id);
+    
+    if (error) {
+      toast.error("تعذر تحديث الحالة");
+    } else {
+      // If paid, also mark all pending commissions for this shop as paid
+      if (status === "paid" && shopId) {
+        await supabase
+          .from("commissions")
+          .update({ status: "paid" })
+          .eq("referrer_shop_id", shopId)
+          .eq("status", "pending");
+      }
+      
+      toast.success("تم التحديث");
+      void load();
+    }
   };
 
   if (loading || !isAdmin) return <div className="bg-surface min-h-screen" />;
@@ -213,7 +236,7 @@ const Admin = () => {
                   <th className="text-right py-3 px-2">المسوق (المحل)</th>
                   <th className="text-right py-3 px-2">بيانات السحب</th>
                   <th className="text-right py-3 px-2">المبلغ</th>
-                  <th className="text-right py-3 px-2">الحالة</th>
+                  <th className="text-right py-3 px-2">الحالة/ملاحظات</th>
                   <th className="text-right py-3 px-2">الإجراء</th>
                 </tr>
               </thead>
@@ -228,17 +251,20 @@ const Admin = () => {
                       </td>
                       <td className="py-3 px-2 font-black text-success">{w.amount} ج</td>
                       <td className="py-3 px-2">
-                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
-                          w.status === "paid" ? "bg-success/10 text-success" : w.status === "pending" ? "bg-amber-500/10 text-amber-500" : "bg-destructive/10 text-destructive"
-                        }`}>{w.status === "paid" ? "تم" : w.status === "pending" ? "انتظار" : "مرفوض"}</span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`px-2 py-1 rounded-md text-[10px] font-bold w-fit ${
+                            w.status === "paid" ? "bg-success/10 text-success" : w.status === "pending" ? "bg-amber-500/10 text-amber-500" : "bg-destructive/10 text-destructive"
+                          }`}>{w.status === "paid" ? "تم" : w.status === "pending" ? "انتظار" : "مرفوض"}</span>
+                          {w.admin_note && <span className="text-[10px] text-surface-muted italic">{w.admin_note}</span>}
+                        </div>
                       </td>
                       <td className="py-3 px-2">
                         {w.status === "pending" && (
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={() => setWithdrawalStatus(w.id, "paid")} className="h-7 bg-success text-white">
+                            <Button size="sm" onClick={() => setWithdrawalStatus(w.id, "paid", w.shop?.id)} className="h-7 bg-success text-white">
                               تم الدفع
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => setWithdrawalStatus(w.id, "rejected")} className="h-7 text-destructive border-destructive">
+                            <Button size="sm" variant="outline" onClick={() => setWithdrawalStatus(w.id, "rejected", w.shop?.id)} className="h-7 text-destructive border-destructive">
                               رفض
                             </Button>
                           </div>
