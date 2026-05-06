@@ -486,87 +486,121 @@ const Dashboard = () => {
       )}
 
       {/* Header */}
-      <header className="bg-surface-card border-b border-surface px-6 py-4 sticky top-0 z-30">
+      <header className="bg-surface-card border-b border-surface px-4 py-4 relative z-30">
         {/* Upsell Banner */}
         {shop.plan === "free" && (
-          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 -mx-6 -mt-4 mb-4 px-6 py-2.5 flex items-center justify-between animate-in slide-in-from-top duration-500">
+          <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-primary/20 -mx-4 -mt-4 mb-4 px-4 py-2 flex items-center justify-between animate-in slide-in-from-top duration-500">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-xs font-bold text-surface-fg">استخدم كل المميزات مع الباقة الاحترافية</span>
+              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+              <span className="text-[10px] sm:text-xs font-bold text-surface-fg">استخدم كل المميزات مع الباقة الاحترافية</span>
             </div>
-            <Button variant="link" size="sm" onClick={() => setShowUpgradeModal(true)} className="text-xs font-black text-primary p-0 h-auto">
+            <Button variant="link" size="sm" onClick={() => setShowUpgradeModal(true)} className="text-[10px] sm:text-xs font-black text-primary p-0 h-auto">
               ترقية الآن 👋
             </Button>
           </div>
         )}
 
-        <div className="container mx-auto flex items-center justify-between max-w-7xl gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            {isAdmin && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate("/admin")} 
-                className="gap-1 border-primary/30 text-primary hover:bg-primary/5"
-              >
-                <Shield className="w-4 h-4" /> المشرف
+        <div className="container mx-auto flex items-center justify-between max-w-7xl">
+          <div className="flex items-center gap-2">
+            <Logo size="sm" className="sm:size-md" />
+            <div className="hidden sm:block">
+              <div className="text-[10px] text-surface-muted uppercase tracking-wider font-bold leading-none mb-0.5">{planLabel}</div>
+              <div className="text-sm font-bold text-surface-fg leading-none">{shop.name}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="hidden md:flex items-center gap-2">
+              {isAdmin && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate("/admin")} 
+                  className="gap-1 border-primary/30 text-primary hover:bg-primary/5 rounded-full h-9 px-4 text-xs font-bold"
+                >
+                  <Shield className="w-3.5 h-3.5" /> لوحة المشرف
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => navigate("/pricing")} className="gap-1 rounded-full h-9 px-4 text-xs font-bold">
+                <Crown className="w-3.5 h-3.5" /> الباقات
               </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={() => navigate("/pricing")} className="gap-1">
-              <Crown className="w-4 h-4" /> الباقات
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/affiliate")} className="gap-1">
-              <Sparkles className="w-4 h-4" /> الشركاء
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => loadData()} title="تحديث">
+              <Button variant="outline" size="sm" onClick={() => navigate("/affiliate")} className="gap-1 rounded-full h-9 px-4 text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5" /> الشركاء
+              </Button>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-full h-9 w-9 border-surface-muted md:hidden">
+                  <Shield className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-2xl p-2">
+                {isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate("/admin")} className="gap-2 rounded-xl h-10 cursor-pointer font-bold">
+                    <Shield className="w-4 h-4" /> لوحة المشرف
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => navigate("/pricing")} className="gap-2 rounded-xl h-10 cursor-pointer font-bold">
+                  <Crown className="w-4 h-4" /> الباقات
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/affiliate")} className="gap-2 rounded-xl h-10 cursor-pointer font-bold">
+                  <Sparkles className="w-4 h-4" /> الشركاء
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="h-4 w-px bg-surface mx-1" />
+
+            <Button variant="outline" size="icon" onClick={() => loadData()} className="rounded-full h-9 w-9 border-surface-muted" title="تحديث">
               <RefreshCw className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={() => signOut().then(() => navigate("/"))} title="تسجيل خروج">
+            <Button variant="outline" size="icon" onClick={() => signOut().then(() => navigate("/"))} className="rounded-full h-9 w-9 text-destructive border-destructive/20 hover:bg-destructive/10" title="تسجيل خروج">
               <LogOut className="w-4 h-4" />
             </Button>
           </div>
-          <div className="text-left">
-            <Logo size="md" />
-            <div className="text-xs text-surface-muted mt-0.5">{shop.name} · {planLabel}</div>
+        </div>
+
+        {/* Section Navigation - Horizontal Scroll on small screens */}
+        <div className="container mx-auto max-w-7xl mt-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
+            <DashNavLink active={!section} onClick={() => setSearchParams({})} icon={<Activity className="w-3.5 h-3.5" />} label="الرئيسية" />
+            <DashNavLink
+              active={section === "branding"}
+              disabled={!hasFeature(shop.plan as PlanId, "branding")}
+              onClick={() => setSearchParams({ section: "branding" })}
+              icon={<Palette className="w-3.5 h-3.5" />}
+              label="تخصيص"
+              requiredPlan={!hasFeature(shop.plan as PlanId, "branding") ? "إحترافي" : undefined}
+            />
+            <DashNavLink
+              active={section === "branches"}
+              disabled={!hasFeature(shop.plan as PlanId, "multi_branch")}
+              onClick={() => setSearchParams({ section: "branches" })}
+              icon={<Building2 className="w-3.5 h-3.5" />}
+              label="فروع"
+              requiredPlan={!hasFeature(shop.plan as PlanId, "multi_branch") ? "الأعمال" : undefined}
+            />
+            <DashNavLink
+              active={section === "staff"}
+              disabled={!hasFeature(shop.plan as PlanId, "staff_accounts")}
+              onClick={() => setSearchParams({ section: "staff" })}
+              icon={<UserPlus className="w-3.5 h-3.5" />}
+              label="موظفين"
+              requiredPlan={!hasFeature(shop.plan as PlanId, "staff_accounts") ? "الأعمال" : undefined}
+            />
+            <DashNavLink
+              active={section === "reports"}
+              disabled={!hasFeature(shop.plan as PlanId, "exports")}
+              onClick={() => setSearchParams({ section: "reports" })}
+              icon={<BarChart3 className="w-3.5 h-3.5" />}
+              label="تقارير"
+              requiredPlan={!hasFeature(shop.plan as PlanId, "exports") ? "الأعمال" : undefined}
+            />
           </div>
         </div>
-        {/* Section nav */}
-        <div className="container mx-auto max-w-7xl mt-3 flex items-center gap-2 flex-wrap">
-          <DashNavLink active={!section} onClick={() => setSearchParams({})} icon={<Activity className="w-3.5 h-3.5" />} label="الداشبورد" />
-          <DashNavLink
-            active={section === "branding"}
-            disabled={!hasFeature(shop.plan as PlanId, "branding")}
-            onClick={() => setSearchParams({ section: "branding" })}
-            icon={<Palette className="w-3.5 h-3.5" />}
-            label="تخصيص المحل"
-            requiredPlan={!hasFeature(shop.plan as PlanId, "branding") ? "إحترافي" : undefined}
-          />
-          <DashNavLink
-            active={section === "branches"}
-            disabled={!hasFeature(shop.plan as PlanId, "multi_branch")}
-            onClick={() => setSearchParams({ section: "branches" })}
-            icon={<Building2 className="w-3.5 h-3.5" />}
-            label="إضافة فرع"
-            requiredPlan={!hasFeature(shop.plan as PlanId, "multi_branch") ? "الأعمال" : undefined}
-          />
-          <DashNavLink
-            active={section === "staff"}
-            disabled={!hasFeature(shop.plan as PlanId, "staff_accounts")}
-            onClick={() => setSearchParams({ section: "staff" })}
-            icon={<UserPlus className="w-3.5 h-3.5" />}
-            label="إضافة موظف"
-            requiredPlan={!hasFeature(shop.plan as PlanId, "staff_accounts") ? "الأعمال" : undefined}
-          />
-          <DashNavLink
-            active={section === "reports"}
-            disabled={!hasFeature(shop.plan as PlanId, "exports")}
-            onClick={() => setSearchParams({ section: "reports" })}
-            icon={<BarChart3 className="w-3.5 h-3.5" />}
-            label="التقارير"
-            requiredPlan={!hasFeature(shop.plan as PlanId, "exports") ? "الأعمال" : undefined}
-          />
-        </div>
       </header>
+
 
       <main className="container mx-auto max-w-7xl px-6 py-8">
         {section === "branding" ? (
