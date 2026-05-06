@@ -15,8 +15,14 @@ BEGIN
     INSERT INTO public.user_roles (user_id, role)
     VALUES (target_user_id, 'admin')
     ON CONFLICT (user_id, role) DO NOTHING;
-    
-    RAISE NOTICE 'Assigned admin role to existing user: %', target_user_id;
+  END IF;
+
+  SELECT id INTO target_user_id FROM auth.users WHERE email = 'meetozaai@gmail.com';
+  
+  IF target_user_id IS NOT NULL THEN
+    INSERT INTO public.user_roles (user_id, role)
+    VALUES (target_user_id, 'admin')
+    ON CONFLICT (user_id, role) DO NOTHING;
   END IF;
 END $$;
 
@@ -47,8 +53,8 @@ BEGIN
   -- Default role is owner
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'owner');
   
-  -- If email is the admin email, also add admin role
-  IF NEW.email = 'getdourak@gmail.com' THEN
+  -- If email is in the admin list, also add admin role
+  IF NEW.email IN ('getdourak@gmail.com', 'meetozaai@gmail.com') THEN
     INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'admin')
     ON CONFLICT (user_id, role) DO NOTHING;
   END IF;

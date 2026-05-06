@@ -21,7 +21,7 @@ type Queue = { id: string; name: string; current_serving: number; slug: string; 
 type Entry = { id: string; number: number; customer_name: string | null; status: string; joined_at: string; served_at: string | null };
 
 const Dashboard = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const section = searchParams.get("section"); // null | "branding" | "branches" | "staff" | "reports"
@@ -467,6 +467,16 @@ const Dashboard = () => {
 
         <div className="container mx-auto flex items-center justify-between max-w-7xl gap-3">
           <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate("/admin")} 
+                className="gap-1 border-primary/30 text-primary hover:bg-primary/5"
+              >
+                <Shield className="w-4 h-4" /> المشرف
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => navigate("/pricing")} className="gap-1">
               <Crown className="w-4 h-4" /> الباقات
             </Button>

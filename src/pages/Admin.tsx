@@ -35,19 +35,28 @@ const Admin = () => {
     shop?: { id: string; name: string; owner_id: string };
   }[]>([]);
 
+  const [errorLoading, setErrorLoading] = useState<string | null>(null);
+
+  console.log("[Admin] Render:", { loading, hasUser: !!user, isAdmin, errorLoading });
+
   useEffect(() => {
     const checkAccess = async () => {
       if (!loading) {
         if (!user) {
+          console.log("[Admin] No user, redirecting to login");
           navigate("/login");
         } else if (!isAdmin) {
+          console.log("[Admin] Not admin, redirecting to dashboard");
           toast.error("ليس لديك صلاحية");
           navigate("/dashboard");
         } else {
           try {
+            console.log("[Admin] Starting load()...");
             await load();
+            console.log("[Admin] Load() complete");
           } catch (error) {
-            console.error("Error loading admin data:", error);
+            console.error("[Admin] Error loading admin data:", error);
+            setErrorLoading(error instanceof Error ? error.message : String(error));
             toast.error("حدث خطأ أثناء تحميل البيانات");
           }
         }
@@ -58,54 +67,68 @@ const Admin = () => {
   }, [loading, user, isAdmin, navigate, load]);
 
   const load = useCallback(async () => {
-    const [{ data: s }, { data: p }, { data: r }, { data: c }, { data: w }] = await Promise.all([
-      supabase.from("shops").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("*"),
-      supabase.from("referrals").select("*"),
-      supabase.from("commissions").select(`
-        *,
-        referrer:referrer_shop_id (name, owner_id),
-        referred:referred_shop_id (name)
-      `).order("created_at", { ascending: false }),
-      supabase.from("withdrawals").select(`
-        *,
-        shop:shop_id (id, name, owner_id)
-      `).order("created_at", { ascending: false }),
-    ]);
+    try {
+      const [{ data: s, error: es }, { data: p, error: ep }, { data: r, error: er }, { data: c, error: ec }, { data: w, error: ew }] = await Promise.all([
+        supabase.from("shops").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("*"),
+        supabase.from("referrals").select("*"),
+        supabase.from("commissions").select(`
+          *,
+          referrer:referrer_shop_id (name, owner_id),
+          referred:referred_shop_id (name)
+        `).order("created_at", { ascending: false }),
+        supabase.from("withdrawals").select(`
+          *,
+          shop:shop_id (id, name, owner_id)
+        `).order("created_at", { ascending: false }),
+      ]);
 
-    const rawShops = (s ?? []) as ShopRow[];
-    
-    // Deduplicate shops by owner_id in frontend (keep most recent)
-    const uniqueShops = rawShops.reduce((acc, current) => {
-      const x = acc.find(item => item.owner_id === current.owner_id);
-      if (!x) {
-        return acc.concat([current]);
-      } else {
-        return acc;
+      if (es || ep || er || ec || ew) {
+        console.error("[Admin] One or more queries failed:", { es, ep, er, ec, ew });
       }
-    }, [] as ShopRow[]);
 
-    // If there were duplicates, try to clean them up from DB (most recent stay)
-    if (rawShops.length > uniqueShops.length && isAdmin) {
-      const idsToDelete = rawShops
-        .filter(rs => !uniqueShops.some(us => us.id === rs.id))
-        .map(rs => rs.id);
+      const rawShops = (s ?? []) as ShopRow[];
+      console.log("[Admin] Shops loaded:", rawShops.length);
       
-      if (idsToDelete.length > 0) {
-        try {
-          await supabase.from("shops").delete().in("id", idsToDelete);
-          console.log("Cleaned up duplicate shops from DB:", idsToDelete.length);
-        } catch (err) {
-          console.error("Failed to clean up duplicates:", err);
+      // Deduplicate shops by owner_id in frontend (keep most recent)
+      const uniqueShops = rawShops.reduce((acc, current) => {
+        const x = acc.find(item => item.owner_id === current.owner_id);
+        if (!x) {
+          return acc.concat([current]);
+        } else {
+          return acc;
+        }
+      }, [] as ShopRow[]);
+
+      // If there were duplicates, try to clean them up from DB (most recent stay)
+      if (rawShops.length > uniqueShops.length && isAdmin) {
+        const idsToDelete = rawShops
+          .filter(rs => !uniqueShops.some(us => us.id === rs.id))
+          .map(rs => rs.id);
+        
+        if (idsToDelete.length > 0) {
+          try {
+            const { error: delErr } = await supabase.from("shops").delete().in("id", idsToDelete);
+            if (delErr) {
+              console.warn("[Admin] Failed to delete duplicates:", delErr);
+            } else {
+              console.log("[Admin] Cleaned up duplicate shops from DB:", idsToDelete.length);
+            }
+          } catch (err) {
+            console.error("[Admin] Exception during duplicate cleanup:", err);
+          }
         }
       }
-    }
 
-    setShops(uniqueShops);
-    setProfiles(p ?? []);
-    setRefs(r ?? []);
-    setCommissions(c ?? []);
-    setWithdrawals(w ?? []);
+      setShops(uniqueShops);
+      setProfiles(p ?? []);
+      setRefs(r ?? []);
+      setCommissions(c ?? []);
+      setWithdrawals(w ?? []);
+    } catch (e) {
+      console.error("[Admin] load() exception:", e);
+      throw e;
+    }
   }, [isAdmin]);
 
   const setPlan = async (shopId: string, plan: PlanId) => {
@@ -148,14 +171,26 @@ const Admin = () => {
     }
   };
 
-  if (loading) {
+  if (errorLoading) {
     return (
-      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-surface-fg">
-        <Logo size="lg" className="animate-pulse" />
-        <div className="text-surface-muted font-bold animate-pulse">جاري تحميل لوحة المشرف...</div>
-        <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-4 text-xs border-surface">
+      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
+        <Logo size="lg" />
+        <h1 className="text-xl font-bold text-destructive mt-4">تعذر تحميل البيانات</h1>
+        <p className="text-surface-muted max-w-md">{errorLoading}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
           إعادة المحاولة
         </Button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-12">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-xl font-black text-slate-800">جاري تحميل لوحة المشرف...</div>
+        <p className="text-slate-500 mt-2">يرجى الانتظار ثواني</p>
+        <Button variant="ghost" onClick={() => window.location.reload()} className="mt-8">تحديث الصفحة</Button>
       </div>
     );
   }
