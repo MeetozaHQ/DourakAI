@@ -63,6 +63,21 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(ch); };
   }, [shop, queue]);
 
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-xl font-bold text-slate-800">جاري تحميل لوحة التحكم...</h2>
+        <p className="text-slate-500 mt-2">يرجى الانتظار بينما نجهز بياناتك</p>
+        <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-8 opacity-50">
+          إذا طال الانتظار، اضغط هنا للتحديث
+        </Button>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
   const loadData = async () => {
     try {
       // 1. Try to fetch existing shop

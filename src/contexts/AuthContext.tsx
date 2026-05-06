@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(sess?.user ?? null);
       if (sess?.user) {
         // Hardcode admin access for certain emails
-        const isHardcodedAdmin = sess.user.email === "getdourak@gmail.com" || sess.user.email === "meetozaai@gmail.com";
+        const isHardcodedAdmin = ["getdourak@gmail.com", "meetozaai@gmail.com"].includes(sess.user.email || "");
         
         const { data } = await supabase
           .from("user_roles")
