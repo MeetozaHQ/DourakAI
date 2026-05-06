@@ -37,13 +37,29 @@ const Dashboard = () => {
     peakHours: [] as { hour: number; count: number }[] 
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
 
   const currentLimit = shop?.daily_limit ?? (shop?.plan === "free" ? 10 : Infinity);
   const isLimitReached = shop?.plan === "free" && stats.total >= currentLimit;
 
   useEffect(() => {
-    console.log("[Dashboard] auth state", { loading, hasUser: !!user, userId: user?.id });
+    const seen = localStorage.getItem("dourak_onboarding_seen");
+    if (!seen && shop) {
+      setShowOnboarding(true);
+    }
+  }, [shop]);
+
+  useEffect(() => {
+    console.log("[Dashboard] auth state", { loading, hasUser: !!user, userId: user?.id, hash: window.location.hash });
+    
+    // If not loading and no user, but there's a hash, Supabase might be processing a link.
+    // Wait a bit or let onAuthStateChange in context handle it.
     if (!loading && !user) {
+      if (window.location.hash && window.location.hash.includes("access_token")) {
+        console.log("[Dashboard] Hash detected, waiting for session sync...");
+        return;
+      }
       console.log("[Dashboard] No user after loading complete, redirecting to /login");
       navigate("/login", { replace: true });
     }
@@ -254,16 +270,6 @@ const Dashboard = () => {
     }
     await loadEntries();
   };
-
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingStep, setOnboardingStep] = useState(1);
-
-  useEffect(() => {
-    const seen = localStorage.getItem("dourak_onboarding_seen");
-    if (!seen && shop) {
-      setShowOnboarding(true);
-    }
-  }, [shop]);
 
   const finishOnboarding = () => {
     localStorage.setItem("dourak_onboarding_seen", "true");

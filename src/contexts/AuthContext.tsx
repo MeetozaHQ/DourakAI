@@ -34,22 +34,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         userId: sess?.user?.id,
         hasAccessToken: !!sess?.access_token,
       });
+      
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
         // Hardcode admin access for certain emails
         const isHardcodedAdmin = ["getdourak@gmail.com", "meetozaai@gmail.com"].includes(sess.user.email || "");
         
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", sess.user.id)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (!active) return;
-        setIsAdmin(isHardcodedAdmin || !!data);
+        try {
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", sess.user.id)
+            .eq("role", "admin")
+            .maybeSingle();
+          if (active) {
+            setIsAdmin(isHardcodedAdmin || !!data);
+          }
+        } catch (err) {
+          console.error("[Auth] Error fetching roles:", err);
+          if (active) setIsAdmin(isHardcodedAdmin);
+        }
       } else {
         setIsAdmin(false);
+      }
+
+      // If we don't have a session but there's a hash, don't stop loading yet
+      // as Supabase might be about to emit a SIGNED_IN event
+      if (!sess && window.location.hash && window.location.hash.includes("access_token")) {
+        console.log("[Auth] No session but hash exists, keeping loading=true");
+        return;
       }
 
       setLoading(false);

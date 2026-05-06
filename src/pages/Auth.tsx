@@ -51,7 +51,7 @@ const Auth = ({ mode }: { mode: "login" | "signup" }) => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
+            emailRedirectTo: `${window.location.origin.replace(/\/+$/, "")}/dashboard`,
             data: { shop_name: shopName, ref: ref ?? null },
           },
         });

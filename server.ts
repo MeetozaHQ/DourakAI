@@ -334,9 +334,21 @@ async function start() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+    
+    // Add catch-all for development too
+    app.get("*", async (req, res, next) => {
+      if (req.url.startsWith("/api") || req.url.startsWith("/enqueue")) return next();
+      try {
+        const template = await vite.transformIndexHtml(req.url, "");
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { index: false })); // don't serve index automatically so catch-all handles it
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
