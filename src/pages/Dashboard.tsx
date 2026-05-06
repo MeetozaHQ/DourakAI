@@ -274,8 +274,11 @@ const Dashboard = () => {
     return (
       <div className="bg-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <h2 className="text-xl font-bold text-slate-800">جاري تحميل بيانات محلك...</h2>
+        <h2 className="text-xl font-bold text-slate-800">جاري تحميل بيانات محلك (V2)...</h2>
         <p className="text-slate-500 mt-2">يرجى الانتظار ثواني بينما نجهز لوحة التحكم</p>
+        <div className="mt-4 text-[10px] text-slate-300 opacity-50 uppercase tracking-widest">
+          Debug: {user?.email || "No User"} | Admin: {isAdmin ? "YES" : "NO"}
+        </div>
         <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-8">
           تحديث الصفحة
         </Button>

@@ -186,10 +186,13 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-12">
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-12 text-center">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div className="text-xl font-black text-slate-800">جاري تحميل لوحة المشرف...</div>
-        <p className="text-slate-500 mt-2">يرجى الانتظار ثواني</p>
+        <div className="text-xl font-black text-slate-800">جاري تحميل لوحة المشرف (V2)...</div>
+        <p className="text-slate-500 mt-2">يرجى الانتظار ثواني بينما نتحقق من صلاحياتك</p>
+        <div className="mt-4 text-[10px] text-slate-300 opacity-50 uppercase tracking-widest">
+          Debug: {user?.email || "No User"} | Admin: {isAdmin ? "YES" : "NO"}
+        </div>
         <Button variant="ghost" onClick={() => window.location.reload()} className="mt-8">تحديث الصفحة</Button>
       </div>
     );
