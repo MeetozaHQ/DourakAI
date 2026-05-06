@@ -214,54 +214,54 @@ const Affiliate = () => {
         </div>
       </header>
 
-      <main className="container mx-auto max-w-4xl px-6 py-12">
+      <main className="container mx-auto max-w-4xl px-4 md:px-6 py-8 md:py-12">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-10 md:mb-12"
         >
-          <div className="inline-flex w-24 h-24 rounded-[2rem] bg-gradient-gold items-center justify-center text-5xl mb-6 shadow-2xl relative">
+          <div className="inline-flex w-20 h-20 md:w-24 md:h-24 rounded-[1.5rem] md:rounded-[2rem] bg-gradient-gold items-center justify-center text-4xl md:text-5xl mb-6 shadow-2xl relative">
             <motion.div
               animate={{ rotate: [0, 10, -10, 0] }}
               transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
             >
               💰
             </motion.div>
-            <div className="absolute -top-1 -right-1 w-6 h-6 bg-success rounded-full border-2 border-white animate-pulse" />
+            <div className="absolute -top-1 -right-1 w-5 h-5 md:w-6 md:h-6 bg-success rounded-full border-2 border-white animate-pulse" />
           </div>
-          <h1 className="text-4xl md:text-6xl font-black text-surface-fg mb-4 tracking-tight">برنامج الشركاء</h1>
-          <p className="text-surface-muted text-xl max-w-2xl mx-auto leading-relaxed">
+          <h1 className="text-3xl md:text-6xl font-black text-surface-fg mb-4 tracking-tight">برنامج الشركاء</h1>
+          <p className="text-surface-muted text-lg md:text-xl max-w-2xl mx-auto leading-relaxed px-2">
             رشّح محلات لدَوْرَك واكسب <span className="font-bold text-primary underline underline-offset-4">١٥% عمولة</span> على كل اشتراك.
           </p>
         </motion.div>
 
         {/* Live Earnings Header */}
-        <section className="mb-12">
-          <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-[3rem] p-1 shadow-2xl overflow-hidden">
-            <div className="bg-white/5 backdrop-blur-xl p-8 md:p-12 text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl -ml-32 -mb-32" />
+        <section className="mb-10 md:mb-12">
+          <div className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-[2rem] md:rounded-[3rem] p-0.5 md:p-1 shadow-2xl overflow-hidden">
+            <div className="bg-white/5 backdrop-blur-xl p-6 md:p-12 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-48 h-48 md:w-64 md:h-64 bg-white/10 rounded-full blur-3xl -mr-24 -mt-24 md:-mr-32 md:-mt-32" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 md:w-64 md:h-64 bg-black/10 rounded-full blur-3xl -ml-24 -mb-24 md:-ml-32 md:-mb-32" />
               
               <div className="relative z-10">
-                <span className="inline-block px-4 py-1.5 rounded-full bg-white/20 text-white text-xs font-black uppercase tracking-widest mb-4">إجمالي أرباحك</span>
-                <div className="text-7xl md:text-8xl font-black text-white mb-6 flex items-center justify-center gap-1">
+                <span className="inline-block px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-white/20 text-white text-[10px] md:text-xs font-black uppercase tracking-widest mb-4">إجمالي أرباحك</span>
+                <div className="text-5xl md:text-8xl font-black text-white mb-6 flex items-center justify-center gap-1">
                   <AnimatedNumber value={stats.earnings + stats.pending} />
-                  <span className="text-3xl md:text-4xl opacity-70">ج</span>
+                  <span className="text-2xl md:text-4xl opacity-70">ج</span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                   <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/10">
-                     <div className="text-white/60 text-[10px] font-bold uppercase mb-1">أرباح اليوم</div>
-                     <div className="text-2xl font-black text-white">
+                <div className="grid grid-cols-2 gap-3 md:gap-4 max-w-md mx-auto">
+                   <div className="bg-white/10 rounded-xl md:rounded-2xl p-3 md:p-4 backdrop-blur-md border border-white/10">
+                     <div className="text-white/60 text-[9px] md:text-[10px] font-bold uppercase mb-1">أرباح اليوم</div>
+                     <div className="text-xl md:text-2xl font-black text-white">
                        <AnimatedNumber value={stats.today} />
-                       <span className="text-sm ml-1 opacity-60 font-medium">ج</span>
+                       <span className="text-xs md:text-sm ml-1 opacity-60 font-medium">ج</span>
                      </div>
                    </div>
-                   <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/10 text-right">
-                     <div className="text-white/60 text-[10px] font-bold uppercase mb-1">أرباح هذا الشهر</div>
-                     <div className="text-2xl font-black text-white">
+                   <div className="bg-white/10 rounded-xl md:rounded-2xl p-3 md:p-4 backdrop-blur-md border border-white/10 text-right">
+                     <div className="text-white/60 text-[9px] md:text-[10px] font-bold uppercase mb-1">أرباح هذا الشهر</div>
+                     <div className="text-xl md:text-2xl font-black text-white">
                        <AnimatedNumber value={stats.month} />
-                       <span className="text-sm ml-1 opacity-60 font-medium">ج</span>
+                       <span className="text-xs md:text-sm ml-1 opacity-60 font-medium">ج</span>
                      </div>
                    </div>
                 </div>
@@ -272,27 +272,27 @@ const Affiliate = () => {
 
         {/* Affiliate Level Tracker */}
         <section className="mb-8">
-          <div className="bg-surface-card rounded-[2.5rem] p-8 shadow-soft border border-surface overflow-hidden relative">
-            <div className="absolute top-0 left-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -ml-16 -mt-16" />
+          <div className="bg-surface-card rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-soft border border-surface overflow-hidden relative">
+            <div className="absolute top-0 left-0 w-24 h-24 md:w-32 md:h-32 bg-primary/5 rounded-full blur-3xl -ml-12 -mt-12 md:-ml-16 md:-mt-16" />
             
             <div className="relative z-10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6">
                 <div className="flex items-center gap-4">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-sm ${currentLevel.color}`}>
+                  <div className={`w-14 h-14 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center text-2xl md:text-3xl shadow-sm ${currentLevel.color}`}>
                     {currentLevel.icon}
                   </div>
                   <div>
-                    <div className="text-sm text-surface-muted font-bold mb-1">المستوى الحالي</div>
-                    <div className="text-2xl font-black text-surface-fg flex items-center gap-2">
+                    <div className="text-xs md:text-sm text-surface-muted font-bold mb-1">المستوى الحالي</div>
+                    <div className="text-xl md:text-2xl font-black text-surface-fg flex items-center gap-2">
                        {currentLevel.name}
-                       {nextLevel && <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">نشط</span>}
+                       {nextLevel && <span className="text-[10px] md:text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">نشط</span>}
                     </div>
                   </div>
                 </div>
                 
-                <div className="text-right">
+                <div className="md:text-right">
                   {nextLevel ? (
-                    <div className="text-sm">
+                    <div className="text-xs md:text-sm">
                       <span className="text-surface-muted">باقي </span>
                       <span className="font-black text-primary">{remaining} إحالة</span>
                       <span className="text-surface-muted"> للوصول إلى </span>
@@ -304,7 +304,7 @@ const Affiliate = () => {
                 </div>
               </div>
 
-              <div className="relative h-4 bg-surface-muted rounded-full overflow-hidden">
+              <div className="relative h-3 md:h-4 bg-surface-muted rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
@@ -313,7 +313,7 @@ const Affiliate = () => {
                 />
               </div>
               
-              <div className="flex justify-between mt-2 text-[10px] font-black text-surface-muted uppercase tracking-widest px-1">
+              <div className="flex justify-between mt-2 text-[9px] md:text-[10px] font-black text-surface-muted uppercase tracking-widest px-1">
                 <span>{currentLevel.min} إحالة</span>
                 {nextLevel && <span>{nextLevel.min} إحالة</span>}
               </div>
@@ -321,24 +321,24 @@ const Affiliate = () => {
           </div>
         </section>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
           {[
             { icon: Gift, label: "نسبة العمولة", value: "١٥%", color: "text-warning bg-warning/10" },
             { icon: TrendingUp, label: "أرباح مؤكدة", value: `${stats.earnings} ج`, color: "text-success bg-success/10" },
             { icon: DollarSign, label: "أرباح معلقة", value: `${stats.pending} ج`, color: "text-primary bg-primary/10" },
             { icon: Users, label: "محلات رشحتها", value: stats.count, color: "text-accent bg-accent/10" },
           ].map((s, i) => (
-            <div key={i} className="bg-surface-card rounded-3xl p-6 shadow-soft border border-surface text-center hover:scale-[1.02] transition-transform">
-              <div className={`inline-flex w-12 h-12 rounded-2xl items-center justify-center mb-4 ${s.color}`}>
-                <s.icon className="w-6 h-6" />
+            <div key={i} className="bg-surface-card rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-soft border border-surface text-center hover:scale-[1.02] transition-transform flex flex-col items-center justify-center">
+              <div className={`inline-flex w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-2xl items-center justify-center mb-3 md:mb-4 ${s.color}`}>
+                <s.icon className="w-5 h-5 md:w-6 md:h-6" />
               </div>
-              <div className="text-2xl font-black text-surface-fg">{s.value}</div>
-              <div className="text-xs text-surface-muted mt-1 font-bold">{s.label}</div>
+              <div className="text-xl md:text-2xl font-black text-surface-fg">{s.value}</div>
+              <div className="text-[10px] md:text-xs text-surface-muted mt-1 font-bold">{s.label}</div>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-center mb-12">
+        <div className="flex justify-center mb-10 md:mb-12">
            <Button 
             onClick={() => {
               const balance = stats.earnings - stats.withdrawn;
@@ -348,27 +348,27 @@ const Affiliate = () => {
                 setShowWithdrawModal(true);
               }
             }}
-            className="bg-white text-primary border-2 border-primary/20 hover:bg-primary/5 rounded-[2rem] h-16 px-12 font-black text-lg gap-3 shadow-elegant transition-all active:scale-95"
+            className="w-full md:w-auto bg-white text-primary border-2 border-primary/20 hover:bg-primary/5 rounded-[1.5rem] md:rounded-[2rem] h-14 md:h-16 px-6 md:px-12 font-black text-base md:text-lg gap-3 shadow-elegant transition-all active:scale-95"
            >
-             <DollarSign className="w-6 h-6" />
+             <DollarSign className="w-5 h-5 md:w-6 md:h-6" />
              سحب الأرباح المتوفرة ({stats.earnings - stats.withdrawn} ج)
            </Button>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid lg:grid-cols-3 gap-6 mb-10 md:mb-12">
           {/* Referral Link Box */}
-          <div className="md:col-span-2 bg-surface-card rounded-[2.5rem] p-8 shadow-soft border border-surface flex flex-col justify-between">
+          <div className="lg:col-span-2 bg-surface-card rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-soft border border-surface flex flex-col justify-between">
             <div>
-              <h2 className="text-2xl font-black text-surface-fg mb-2">رابطك الخاص</h2>
-              <p className="text-sm text-surface-muted mb-8 italic">شارك هذا الرابط مع أصحاب المحلات وابدأ في بناء دخلك السلبي</p>
+              <h2 className="text-xl md:text-2xl font-black text-surface-fg mb-2">رابطك الخاص</h2>
+              <p className="text-xs md:text-sm text-surface-muted mb-6 md:mb-8 italic leading-relaxed">شارك هذا الرابط مع أصحاب المحلات وابدأ في بناء دخلك السلبي</p>
             </div>
             <div className="flex flex-col gap-3">
-              <div dir="ltr" className="bg-surface-muted rounded-2xl px-6 py-5 text-sm font-mono text-surface-fg border border-surface truncate text-center font-bold tracking-tight">
+              <div dir="ltr" className="bg-surface-muted rounded-xl md:rounded-2xl px-4 md:px-6 py-4 md:py-5 text-[11px] md:text-sm font-mono text-surface-fg border border-surface break-all text-center font-bold tracking-tight">
                 {url}
               </div>
               <Button
                 onClick={() => { navigator.clipboard.writeText(url); toast.success("تم النسخ ✓"); }}
-                className="bg-gradient-primary text-primary-foreground rounded-2xl h-14 px-8 font-black gap-3 shadow-elegant hover:shadow-2xl transition-all"
+                className="bg-gradient-primary text-primary-foreground rounded-xl md:rounded-2xl h-12 md:h-14 px-8 font-black gap-3 shadow-elegant hover:shadow-2xl transition-all"
               >
                 <Copy className="w-5 h-5" />
                 نسخ الرابط ونشره
@@ -377,29 +377,29 @@ const Affiliate = () => {
           </div>
 
           {/* Quick Guide Card */}
-          <div className="bg-primary/5 border-2 border-dashed border-primary/20 rounded-[2.5rem] p-8 flex flex-col items-center justify-center text-center">
-             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-               <TrendingUp className="w-8 h-8 text-primary" />
+          <div className="bg-primary/5 border-2 border-dashed border-primary/20 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 flex flex-col items-center justify-center text-center">
+             <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+               <TrendingUp className="w-6 md:w-8 h-6 md:h-8 text-primary" />
              </div>
-             <h3 className="font-black text-lg text-primary mb-2">إزاي تكسب أكتر؟</h3>
-             <p className="text-xs text-surface-muted leading-relaxed">
+             <h3 className="font-black text-base md:text-lg text-primary mb-2">إزاي تكسب أكتر؟</h3>
+             <p className="text-[11px] md:text-xs text-surface-muted leading-relaxed">
                وزع فلاير "دَوْرَك" في المولات أو المحلات المزدحمة في منطقتك، وسجلهم برابطك عشان تضمن عمولتك.
              </p>
           </div>
         </div>
 
-        <div className="space-y-12">
+        <div className="space-y-10 md:space-y-12">
           <section>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                  <Clock className="w-5 h-5 text-primary" />
-                 <h2 className="text-2xl font-black text-surface-fg">آخر ٥ عمولات</h2>
+                 <h2 className="text-xl md:text-2xl font-black text-surface-fg">آخر ٥ عمولات</h2>
               </div>
               {commissions.length > 5 && (
-                <span className="text-xs font-bold text-primary cursor-pointer hover:underline">عرض الكل</span>
+                <span className="text-[10px] md:text-xs font-bold text-primary cursor-pointer hover:underline">عرض الكل</span>
               )}
             </div>
-            <div className="bg-surface-card rounded-[2.5rem] border border-surface shadow-soft overflow-hidden">
+            <div className="bg-surface-card rounded-[2rem] md:rounded-[2.5rem] border border-surface shadow-soft overflow-hidden">
               <div className="divide-y divide-surface">
                 {commissions.length > 0 ? (
                   commissions.slice(0, 5).map((c) => (
@@ -471,13 +471,13 @@ const Affiliate = () => {
             </section>
           )}
 
-          <section className="bg-surface-card border border-surface rounded-[3rem] p-10 shadow-soft relative overflow-hidden text-right">
-            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+           <section className="bg-surface-card border border-surface rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-soft relative overflow-hidden text-right">
+            <div className="absolute top-0 right-0 p-8 opacity-5 md:opacity-10 pointer-events-none">
                <Logo size="xl" />
             </div>
-            <h3 className="text-3xl font-black text-surface-fg mb-8">إزاي البرنامج بيشتغل؟</h3>
-            <div className="grid md:grid-cols-2 gap-10">
-              <ol className="space-y-8">
+            <h3 className="text-2xl md:text-3xl font-black text-surface-fg mb-8">إزاي البرنامج بيشتغل؟</h3>
+            <div className="grid lg:grid-cols-2 gap-8 md:gap-10">
+              <ol className="space-y-6 md:space-y-8">
                 {[
                   { t: "شارك رابطك الخاص مع أصحاب المحلات في منطقتك", i: "🔗" },
                   { t: "لما حد يشترك من خلال رابطك، تتسجل إحالة باسمك", i: "📝" },
@@ -485,22 +485,22 @@ const Affiliate = () => {
                   { t: "العمولة بتستمر لمدة ١٢ شهر من تاريخ اشتراك صاحب المحل", i: "📅" },
                   { t: "تقدر تسحب أرباحك لما توصل لـ ٥٠ ج عن طريق فودافون كاش", i: "📱" },
                 ].map((step, i) => (
-                  <li key={i} className="flex items-start gap-5 text-surface-fg">
-                    <div className="w-12 h-12 rounded-2xl bg-surface-muted flex items-center justify-center text-2xl flex-shrink-0 mt-0.5 shadow-sm">
+                  <li key={i} className="flex items-start gap-4 md:gap-5 text-surface-fg">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-surface-muted flex items-center justify-center text-xl md:text-2xl flex-shrink-0 mt-0.5 shadow-sm">
                       {step.i}
                     </div>
-                    <span className="font-bold text-xl leading-snug">{step.t}</span>
+                    <span className="font-bold text-lg md:text-xl leading-snug">{step.t}</span>
                   </li>
                 ))}
               </ol>
-              <div className="bg-primary/5 rounded-3xl p-8 border-2 border-primary/10 flex flex-col items-center justify-center text-center space-y-6">
-                 <div className="w-20 h-20 bg-white rounded-[2rem] shadow-elegant flex items-center justify-center">
+              <div className="bg-primary/5 rounded-2xl md:rounded-3xl p-6 md:p-8 border-2 border-primary/10 flex flex-col items-center justify-center text-center space-y-6">
+                 <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-elegant flex items-center justify-center">
                    <Logo size="lg" />
                  </div>
-                 <p className="text-base text-surface-muted leading-relaxed font-medium">هدفنا نكبر سوا، ونوصل دَوْرَك لكل مكان في مصر والوطن العربي. 🚀</p>
+                 <p className="text-sm md:text-base text-surface-muted leading-relaxed font-medium">هدفنا نكبر سوا، ونوصل دَوْرَك لكل مكان في مصر والوطن العربي. 🚀</p>
                  <Button 
                     variant="outline" 
-                    className="w-full h-14 rounded-2xl gap-3 border-primary/20 text-primary font-black text-lg hover:bg-primary/10" 
+                    className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl gap-3 border-primary/20 text-primary font-black text-base md:text-lg hover:bg-primary/10" 
                     onClick={() => window.open("https://wa.me/201035851931", "_blank")}
                  >
                    <Phone className="w-5 h-5 text-success" /> تواصل معنا (واتساب)
