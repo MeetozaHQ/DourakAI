@@ -300,8 +300,8 @@ const Index = () => {
               <h4 className="font-bold mb-4">تواصل معنا</h4>
               <ul className="space-y-2 text-sm text-foreground/60">
                 <li>
-                  <a href="mailto:getdourak@gmail.com" className="hover:text-foreground transition" dir="ltr">
-                    getdourak@gmail.com
+                  <a href="mailto:info@dourak.online" className="hover:text-foreground transition" dir="ltr">
+                    info@dourak.online
                   </a>
                 </li>
                 <li>

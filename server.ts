@@ -9,6 +9,8 @@ import cors from "cors";
 
 dotenv.config();
 
+import fs from "fs";
+
 const app = express();
 const PORT = 3000;
 
@@ -16,7 +18,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use((req, res, next) => {
-  console.log(`[Request] ${req.method} ${req.url}`);
+  if (req.url.startsWith("/api") || req.url.startsWith("/enqueue")) {
+    console.log(`[API Request] ${req.method} ${req.url}`);
+  }
   next();
 });
 
@@ -337,9 +341,10 @@ async function start() {
     
     // Add catch-all for development too
     app.get("*", async (req, res, next) => {
-      if (req.url.startsWith("/api") || req.url.startsWith("/enqueue")) return next();
+      // Skip API and assets
+      if (req.url.startsWith("/api") || req.url.startsWith("/enqueue") || req.url.includes(".")) return next();
+      
       try {
-        const fs = await import("fs");
         const indexHtml = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
         const template = await vite.transformIndexHtml(req.url, indexHtml);
         res.status(200).set({ "Content-Type": "text/html" }).end(template);
