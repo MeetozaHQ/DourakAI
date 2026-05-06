@@ -150,11 +150,22 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4 text-white">
         <Logo size="lg" className="animate-pulse" />
-        <div className="text-surface-fg/50 font-bold animate-pulse">جاري التحميل...</div>
-        <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-4 text-xs opacity-50">
+        <div className="text-white/50 font-bold animate-pulse">جاري التحميل (Admin)...</div>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-4 text-xs border-white/20 text-white">
           إعادة المحاولة
+        </Button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4 text-white text-center px-6">
+        <h1 className="text-xl font-bold">يرجى تسجيل الدخول أولاً</h1>
+        <Button onClick={() => navigate("/login")} className="mt-4">
+          تسجيل الدخول
         </Button>
       </div>
     );
@@ -162,13 +173,16 @@ const Admin = () => {
 
   if (!isAdmin) {
     return (
-      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
-        <Shield className="w-16 h-16 text-destructive/20 mb-2" />
-        <h1 className="text-2xl font-black text-surface-fg">دخول غير مصرح</h1>
-        <p className="text-surface-muted max-w-xs">ليس لديك صلاحيات كافية للوصول لهذه الصفحة. سيتم تحويلك للوحة التحكم.</p>
-        <Button onClick={() => navigate("/dashboard")} className="mt-4 rounded-xl">
-          العودة للوحة التحكم
-        </Button>
+      <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6 text-white">
+        <Shield className="w-16 h-16 text-destructive mb-2" />
+        <h1 className="text-2xl font-black">دخول غير مصرح</h1>
+        <p className="text-slate-400 max-w-xs">ليس لديك صلاحيات كافية للوصول لهذه الصفحة. حسابك: {user.email}</p>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate("/dashboard")} variant="outline" className="mt-4 rounded-xl border-white/20 text-white">
+            العودة للوحة التحكم
+          </Button>
+          <Button onClick={() => window.location.reload()} variant="ghost" className="mt-4 text-xs opacity-50">تحديث</Button>
+        </div>
       </div>
     );
   }
@@ -283,32 +297,32 @@ const Admin = () => {
         </div>
 
         <div className="bg-surface-card rounded-[2rem] p-4 md:p-6 shadow-soft border border-surface mb-8">
-          <h2 className="text-xl font-black text-surface-fg mb-4">العمولات</h2>
+          <h2 className="text-xl md:text-2xl font-black text-surface-fg mb-4">العمولات</h2>
           
           {/* Mobile View - Cards */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
+          <div className="grid grid-cols-1 gap-4 lg:hidden">
             {commissions.length > 0 ? (
               commissions.map(c => (
-                <div key={c.id} className="bg-surface-muted/30 rounded-2xl p-4 border border-surface">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="text-[10px] text-surface-muted mb-0.5">المسوق (المحل)</div>
-                      <div className="font-bold text-surface-fg">{c.referrer?.name || "مجهول"}</div>
+                <div key={c.id} className="bg-white rounded-3xl p-5 border border-surface shadow-sm">
+                  <div className="flex justify-between items-start mb-4 border-b border-surface pb-3">
+                    <div className="flex-1">
+                      <div className="text-[10px] text-surface-muted-foreground font-bold mb-1 uppercase">المسوق (المحل)</div>
+                      <div className="font-black text-surface-fg text-lg">{c.referrer?.name || "مجهول"}</div>
                     </div>
-                    <div>
-                      <div className="text-[10px] text-surface-muted mb-0.5 text-left">المحل المشترك</div>
-                      <div className="text-sm text-surface-fg text-left">{c.referred?.name || "مجهول"}</div>
+                    <div className="flex-1 text-left">
+                      <div className="text-[10px] text-surface-muted-foreground font-bold mb-1 uppercase">المحل المشترك</div>
+                      <div className="text-sm font-bold text-surface-fg">{c.referred?.name || "مجهول"}</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xl font-black text-primary">{c.amount} <span className="text-xs font-normal opacity-70">ج</span></div>
-                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold mt-1 ${
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="space-y-1">
+                      <div className="text-2xl font-black text-primary">{c.amount} <span className="text-xs font-normal opacity-70">ج</span></div>
+                      <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                         c.status === "paid" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
                       }`}>{c.status === "paid" ? "تم التحويل" : "انتظار"}</span>
                     </div>
                     {c.status === "pending" && (
-                      <Button size="sm" onClick={() => markCommissionPaid(c.id)} className="bg-success text-white rounded-xl h-9 px-4 font-bold">
+                      <Button size="sm" onClick={() => markCommissionPaid(c.id)} className="bg-success text-white hover:bg-success/90 rounded-2xl h-12 px-6 font-black shadow-lg shadow-success/20">
                         تأكيد الدفع
                       </Button>
                     )}
@@ -316,12 +330,12 @@ const Admin = () => {
                 </div>
               ))
             ) : (
-              <div className="py-8 text-center text-surface-muted italic text-sm">لا توجد عمولات حالياً</div>
+              <div className="py-12 bg-surface-muted/30 rounded-3xl text-center text-surface-muted italic text-sm">لا توجد عمولات حالياً</div>
             )}
           </div>
 
           {/* Desktop View - Table */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface text-surface-muted">
@@ -363,41 +377,41 @@ const Admin = () => {
           </div>
         </div>
 
-        <div className="bg-surface-card rounded-[2rem] p-4 md:p-6 shadow-soft border border-surface">
-          <h2 className="text-xl font-black text-surface-fg mb-4">طلبات السحب</h2>
+        <div className="bg-white rounded-[2rem] p-4 md:p-8 shadow-soft border border-surface">
+          <h2 className="text-xl md:text-2xl font-black text-surface-fg mb-6">طلبات السحب</h2>
           
           {/* Mobile View - Cards */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
+          <div className="grid grid-cols-1 gap-4 lg:hidden">
             {withdrawals.length > 0 ? (
               withdrawals.map(w => (
-                <div key={w.id} className="bg-surface-muted/30 rounded-2xl p-4 border border-surface">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <div className="text-[10px] text-surface-muted mb-0.5">المسوق (المحل)</div>
-                      <div className="font-bold text-surface-fg">{w.shop?.name || "مجهول"}</div>
+                <div key={w.id} className="bg-surface-muted/20 rounded-3xl p-5 border border-surface hover:border-primary/30 transition-colors">
+                  <div className="flex justify-between items-start mb-5 pb-4 border-b border-surface/50">
+                    <div className="flex-1">
+                      <div className="text-[10px] text-surface-muted-foreground font-bold mb-1 uppercase">المسوق</div>
+                      <div className="font-black text-surface-fg text-lg">{w.shop?.name || "مجهول"}</div>
                     </div>
-                    <div className="text-left">
-                       <div className="font-bold text-sm">{w.account_name}</div>
-                       <div className="text-[10px] text-surface-muted">{w.phone_number}</div>
+                    <div className="flex-1 text-left">
+                       <div className="font-black text-surface-fg text-base">{w.account_name}</div>
+                       <div className="text-xs font-mono text-primary font-bold">{w.phone_number}</div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <div className="text-2xl font-black text-success">{w.amount} <span className="text-xs font-normal opacity-70 italic">ج</span></div>
-                      <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold mt-1 ${
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="space-y-1">
+                      <div className="text-3xl font-black text-success">{w.amount} <span className="text-sm font-normal opacity-70 italic">ج</span></div>
+                      <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                         w.status === "paid" ? "bg-success/10 text-success" : w.status === "pending" ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive"
-                      }`}>{w.status === "paid" ? "تم" : w.status === "pending" ? "انتظار" : "مرفوض"}</span>
+                      }`}>{w.status === "paid" ? "تم الدفع" : w.status === "pending" ? "انتظار" : "مرفوض"}</span>
                     </div>
-                    {w.admin_note && <div className="text-[10px] text-surface-muted italic border-r-2 border-primary/20 pr-3 py-1 max-w-[150px]">{w.admin_note}</div>}
+                    {w.admin_note && <div className="text-[10px] text-surface-muted-foreground italic border-r-2 border-primary/20 pr-3 py-1 max-w-[150px] leading-relaxed">{w.admin_note}</div>}
                   </div>
 
                   {w.status === "pending" && (
-                    <div className="flex gap-2 w-full pt-2 border-t border-surface/50">
-                      <Button size="sm" onClick={() => setWithdrawalStatus(w.id, "paid", w.shop?.id)} className="flex-1 h-10 bg-success text-white rounded-xl font-bold">
-                        تم الدفع
+                    <div className="flex gap-3 w-full pt-2">
+                      <Button size="sm" onClick={() => setWithdrawalStatus(w.id, "paid", w.shop?.id)} className="flex-1 h-12 bg-success text-white hover:bg-success/90 rounded-2xl font-black shadow-lg shadow-success/20 text-base">
+                        تم الدفع ✅
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setWithdrawalStatus(w.id, "rejected", w.shop?.id)} className="flex-1 h-10 text-destructive border-destructive rounded-xl">
+                      <Button size="sm" variant="outline" onClick={() => setWithdrawalStatus(w.id, "rejected", w.shop?.id)} className="flex-1 h-12 text-destructive border-destructive/30 hover:bg-destructive/5 rounded-2xl font-bold">
                         رفض
                       </Button>
                     </div>
@@ -405,12 +419,12 @@ const Admin = () => {
                 </div>
               ))
             ) : (
-              <div className="py-8 text-center text-surface-muted italic text-sm">لا توجد طلبات سحب حالياً</div>
+              <div className="py-12 bg-surface-muted/30 rounded-3xl text-center text-surface-muted italic text-sm">لا توجد طلبات سحب حالياً</div>
             )}
           </div>
 
           {/* Desktop View - Table */}
-          <div className="hidden md:block overflow-x-auto">
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-surface text-surface-muted">

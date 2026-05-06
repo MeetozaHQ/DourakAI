@@ -204,9 +204,12 @@ const Affiliate = () => {
 
   return (
     <div className="bg-surface min-h-screen font-sans" dir="rtl">
-      <header className="bg-surface-card border-b border-surface px-6 py-4 sticky top-0 z-50 backdrop-blur-md bg-surface-card/80">
+      <header className="bg-white border-b border-surface px-6 py-4 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto flex items-center justify-between max-w-4xl">
-          <Button onClick={() => navigate("/dashboard")} className="bg-primary text-white hover:bg-primary/90 gap-2 rounded-xl shadow-md px-5 font-bold border-none transition-all">
+          <Button 
+            onClick={() => navigate("/dashboard")} 
+            className="bg-primary text-white hover:bg-primary/90 gap-2 rounded-xl shadow-lg px-6 font-bold transition-all active:scale-95"
+          >
             <ArrowLeft className="w-4 h-4 rotate-180" />
             لوحة التحكم
           </Button>
