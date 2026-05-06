@@ -1,6 +1,6 @@
 {
-  "name": "Dourak - Smart Queue Management",
-  "description": "Smart queue management system for shops and customers. Scan QR code, get your turn, and wait comfortably.",
+  "name": "نظام لإدارة الطوابير | دَوْرَك",
+  "description": "دَوْرَك هو نظام ذكي لإدارة الطوابير يسهل على أصحاب المحلات تنظيم عملائهم وعلى العملاء حجز أدوارهم بسهولة عبر رمز الاستجابة السريعة (QR Code).",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
