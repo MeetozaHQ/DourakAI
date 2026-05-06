@@ -36,35 +36,41 @@ const Admin = () => {
   }[]>([]);
 
   const [errorLoading, setErrorLoading] = useState<string | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  console.log("[Admin] Render:", { loading, hasUser: !!user, isAdmin, errorLoading });
+  console.log("[Admin] Render:", { loading, hasUser: !!user, isAdmin, errorLoading, isDataLoaded });
 
   useEffect(() => {
     const checkAccess = async () => {
-      if (!loading) {
-        if (!user) {
-          console.log("[Admin] No user, redirecting to login");
-          navigate("/login");
-        } else if (!isAdmin) {
-          console.log("[Admin] Not admin, redirecting to dashboard");
-          toast.error("ليس لديك صلاحية");
-          navigate("/dashboard");
-        } else {
-          try {
-            console.log("[Admin] Starting load()...");
-            await load();
-            console.log("[Admin] Load() complete");
-          } catch (error) {
-            console.error("[Admin] Error loading admin data:", error);
-            setErrorLoading(error instanceof Error ? error.message : String(error));
-            toast.error("حدث خطأ أثناء تحميل البيانات");
-          }
-        }
+      if (loading) return;
+
+      if (!user) {
+        console.log("[Admin] No user, redirecting to login");
+        navigate("/login");
+        return;
+      }
+
+      if (!isAdmin) {
+        console.log("[Admin] Not admin, redirecting to dashboard");
+        toast.error("ليس لديك صلاحية");
+        navigate("/dashboard");
+        return;
+      }
+
+      try {
+        console.log("[Admin] Starting load()...");
+        await load();
+        console.log("[Admin] Load() complete");
+        setIsDataLoaded(true);
+      } catch (error) {
+        console.error("[Admin] Error loading admin data:", error);
+        setErrorLoading(error instanceof Error ? error.message : String(error));
+        toast.error("حدث خطأ أثناء تحميل البيانات");
       }
     };
     
     void checkAccess();
-  }, [loading, user, isAdmin, navigate, load]);
+  }, [loading, user, isAdmin, navigate]);
 
   const load = useCallback(async () => {
     try {
@@ -90,35 +96,11 @@ const Admin = () => {
       const rawShops = (s ?? []) as ShopRow[];
       console.log("[Admin] Shops loaded:", rawShops.length);
       
-      // Deduplicate shops by owner_id in frontend (keep most recent)
       const uniqueShops = rawShops.reduce((acc, current) => {
         const x = acc.find(item => item.owner_id === current.owner_id);
-        if (!x) {
-          return acc.concat([current]);
-        } else {
-          return acc;
-        }
+        if (!x) return acc.concat([current]);
+        return acc;
       }, [] as ShopRow[]);
-
-      // If there were duplicates, try to clean them up from DB (most recent stay)
-      if (rawShops.length > uniqueShops.length && isAdmin) {
-        const idsToDelete = rawShops
-          .filter(rs => !uniqueShops.some(us => us.id === rs.id))
-          .map(rs => rs.id);
-        
-        if (idsToDelete.length > 0) {
-          try {
-            const { error: delErr } = await supabase.from("shops").delete().in("id", idsToDelete);
-            if (delErr) {
-              console.warn("[Admin] Failed to delete duplicates:", delErr);
-            } else {
-              console.log("[Admin] Cleaned up duplicate shops from DB:", idsToDelete.length);
-            }
-          } catch (err) {
-            console.error("[Admin] Exception during duplicate cleanup:", err);
-          }
-        }
-      }
 
       setShops(uniqueShops);
       setProfiles(p ?? []);
@@ -129,7 +111,7 @@ const Admin = () => {
       console.error("[Admin] load() exception:", e);
       throw e;
     }
-  }, [isAdmin]);
+  }, []);
 
   const setPlan = async (shopId: string, plan: PlanId) => {
     await supabase.from("shops").update({ plan, daily_limit: plan === "free" ? 10 : 999999 }).eq("id", shopId);
@@ -184,11 +166,11 @@ const Admin = () => {
     );
   }
 
-  if (loading) {
+  if (loading || (user && isAdmin && !isDataLoaded && !errorLoading)) {
     return (
       <div className="bg-white min-h-screen flex flex-col items-center justify-center p-12 text-center">
         <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-        <div className="text-xl font-black text-slate-800">جاري تحميل لوحة المشرف...</div>
+        <div className="text-xl font-black text-slate-800">جاري تحميل لوحة المشرف (V3)...</div>
         <p className="text-slate-500 mt-2">يرجى الانتظار ثواني بينما نتحقق من صلاحياتك</p>
         <Button variant="ghost" onClick={() => window.location.reload()} className="mt-8">تحديث الصفحة</Button>
       </div>
@@ -276,7 +258,7 @@ const Admin = () => {
                   </div>
                   <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
                     s.plan === "pro" ? "bg-primary/10 text-primary" : s.plan === "business" ? "bg-warning/10 text-warning" : "bg-surface-muted text-surface-muted"
-                  }`}>{PLANS[s.plan as PlanId]?.name}</span>
+                  }`}>{PLANS[s.plan as PlanId]?.name || s.plan || "مجاني"}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {Object.keys(PLANS).map(p => (
@@ -312,7 +294,7 @@ const Admin = () => {
                     <td className="py-4 px-2 text-center">
                       <span className={`px-2 py-1 rounded-md text-xs font-bold ${
                         s.plan === "pro" ? "bg-primary/10 text-primary" : s.plan === "business" ? "bg-warning/10 text-warning" : "bg-surface-muted text-surface-muted"
-                      }`}>{PLANS[s.plan as PlanId]?.name}</span>
+                      }`}>{PLANS[s.plan as PlanId]?.name || s.plan || "مجاني"}</span>
                     </td>
                     <td className="py-4 px-2">
                       <div className="flex gap-1">
