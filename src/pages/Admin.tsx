@@ -36,11 +36,25 @@ const Admin = () => {
   }[]>([]);
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) navigate("/login");
-      else if (!isAdmin) { toast.error("ليس لديك صلاحية"); navigate("/dashboard"); }
-      else void load();
-    }
+    const checkAccess = async () => {
+      if (!loading) {
+        if (!user) {
+          navigate("/login");
+        } else if (!isAdmin) {
+          toast.error("ليس لديك صلاحية");
+          navigate("/dashboard");
+        } else {
+          try {
+            await load();
+          } catch (error) {
+            console.error("Error loading admin data:", error);
+            toast.error("حدث خطأ أثناء تحميل البيانات");
+          }
+        }
+      }
+    };
+    
+    void checkAccess();
   }, [loading, user, isAdmin, navigate, load]);
 
   const load = useCallback(async () => {
@@ -78,8 +92,12 @@ const Admin = () => {
         .map(rs => rs.id);
       
       if (idsToDelete.length > 0) {
-        await supabase.from("shops").delete().in("id", idsToDelete);
-        console.log("Cleaned up duplicate shops from DB:", idsToDelete.length);
+        try {
+          await supabase.from("shops").delete().in("id", idsToDelete);
+          console.log("Cleaned up duplicate shops from DB:", idsToDelete.length);
+        } catch (err) {
+          console.error("Failed to clean up duplicates:", err);
+        }
       }
     }
 
@@ -130,7 +148,30 @@ const Admin = () => {
     }
   };
 
-  if (loading || !isAdmin) return <div className="bg-surface min-h-screen" />;
+  if (loading) {
+    return (
+      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4">
+        <Logo size="lg" className="animate-pulse" />
+        <div className="text-surface-fg/50 font-bold animate-pulse">جاري التحميل...</div>
+        <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-4 text-xs opacity-50">
+          إعادة المحاولة
+        </Button>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
+        <Shield className="w-16 h-16 text-destructive/20 mb-2" />
+        <h1 className="text-2xl font-black text-surface-fg">دخول غير مصرح</h1>
+        <p className="text-surface-muted max-w-xs">ليس لديك صلاحيات كافية للوصول لهذه الصفحة. سيتم تحويلك للوحة التحكم.</p>
+        <Button onClick={() => navigate("/dashboard")} className="mt-4 rounded-xl">
+          العودة للوحة التحكم
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface min-h-screen" dir="rtl">
