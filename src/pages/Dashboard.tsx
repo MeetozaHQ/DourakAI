@@ -76,7 +76,18 @@ const Dashboard = () => {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-xl font-bold text-slate-800">جاري التحقق من بياناتك...</h2>
+        <p className="text-slate-500 mt-2">يرجى الانتظار ثواني</p>
+        <Button variant="ghost" size="sm" onClick={() => navigate("/login")} className="mt-8">
+          العودة لتسجيل الدخول
+        </Button>
+      </div>
+    );
+  }
 
   const loadData = async () => {
     try {
@@ -260,7 +271,16 @@ const Dashboard = () => {
   };
 
   if (loading || (!shop && user)) {
-    return <div className="bg-surface min-h-screen flex items-center justify-center"><div className="text-surface-muted">جارٍ التحميل...</div></div>;
+    return (
+      <div className="bg-white min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+        <h2 className="text-xl font-bold text-slate-800">جاري تحميل بيانات محلك...</h2>
+        <p className="text-slate-500 mt-2">يرجى الانتظار ثواني بينما نجهز لوحة التحكم</p>
+        <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-8">
+          تحديث الصفحة
+        </Button>
+      </div>
+    );
   }
   if (!shop) {
     return (
