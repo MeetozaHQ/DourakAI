@@ -150,10 +150,10 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4 text-white">
+      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-surface-fg">
         <Logo size="lg" className="animate-pulse" />
-        <div className="text-white/50 font-bold animate-pulse">جاري التحميل (Admin)...</div>
-        <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-4 text-xs border-white/20 text-white">
+        <div className="text-surface-muted font-bold animate-pulse">جاري تحميل لوحة المشرف...</div>
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-4 text-xs border-surface">
           إعادة المحاولة
         </Button>
       </div>
@@ -162,9 +162,9 @@ const Admin = () => {
 
   if (!user) {
     return (
-      <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4 text-white text-center px-6">
+      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-surface-fg text-center px-6">
         <h1 className="text-xl font-bold">يرجى تسجيل الدخول أولاً</h1>
-        <Button onClick={() => navigate("/login")} className="mt-4">
+        <Button onClick={() => navigate("/login")} className="mt-4 rounded-xl">
           تسجيل الدخول
         </Button>
       </div>
@@ -173,12 +173,12 @@ const Admin = () => {
 
   if (!isAdmin) {
     return (
-      <div className="bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6 text-white">
-        <Shield className="w-16 h-16 text-destructive mb-2" />
+      <div className="bg-surface min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6 text-surface-fg">
+        <Shield className="w-16 h-16 text-destructive/20 mb-2" />
         <h1 className="text-2xl font-black">دخول غير مصرح</h1>
-        <p className="text-slate-400 max-w-xs">ليس لديك صلاحيات كافية للوصول لهذه الصفحة. حسابك: {user.email}</p>
+        <p className="text-surface-muted max-w-xs">ليس لديك صلاحيات كافية للوصول لهذه الصفحة. حسابك: {user.email}</p>
         <div className="flex gap-2">
-          <Button onClick={() => navigate("/dashboard")} variant="outline" className="mt-4 rounded-xl border-white/20 text-white">
+          <Button onClick={() => navigate("/dashboard")} variant="outline" className="mt-4 rounded-xl border-surface text-surface-fg">
             العودة للوحة التحكم
           </Button>
           <Button onClick={() => window.location.reload()} variant="ghost" className="mt-4 text-xs opacity-50">تحديث</Button>
@@ -303,26 +303,26 @@ const Admin = () => {
           <div className="grid grid-cols-1 gap-4 lg:hidden">
             {commissions.length > 0 ? (
               commissions.map(c => (
-                <div key={c.id} className="bg-white rounded-3xl p-5 border border-surface shadow-sm">
+                <div key={c.id} className="bg-white rounded-3xl p-5 border border-surface shadow-sm overflow-hidden relative">
                   <div className="flex justify-between items-start mb-4 border-b border-surface pb-3">
-                    <div className="flex-1">
-                      <div className="text-[10px] text-surface-muted-foreground font-bold mb-1 uppercase">المسوق (المحل)</div>
-                      <div className="font-black text-surface-fg text-lg">{c.referrer?.name || "مجهول"}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-surface-muted font-bold mb-1 uppercase truncate">المسوق (المحل)</div>
+                      <div className="font-black text-surface-fg text-lg truncate leading-tight">{c.referrer?.name || "مجهول"}</div>
                     </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-[10px] text-surface-muted-foreground font-bold mb-1 uppercase">المحل المشترك</div>
-                      <div className="text-sm font-bold text-surface-fg">{c.referred?.name || "مجهول"}</div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-[10px] text-surface-muted font-bold mb-1 uppercase truncate">المحل المشترك</div>
+                      <div className="text-sm font-bold text-surface-fg truncate">{c.referred?.name || "مجهول"}</div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
-                      <div className="text-2xl font-black text-primary">{c.amount} <span className="text-xs font-normal opacity-70">ج</span></div>
+                      <div className="text-2xl font-black text-primary leading-none">{c.amount} <span className="text-xs font-normal opacity-70">ج</span></div>
                       <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                         c.status === "paid" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
                       }`}>{c.status === "paid" ? "تم التحويل" : "انتظار"}</span>
                     </div>
                     {c.status === "pending" && (
-                      <Button size="sm" onClick={() => markCommissionPaid(c.id)} className="bg-success text-white hover:bg-success/90 rounded-2xl h-12 px-6 font-black shadow-lg shadow-success/20">
+                      <Button size="sm" onClick={() => markCommissionPaid(c.id)} className="bg-success text-white hover:bg-success/90 rounded-2xl h-12 w-full sm:w-auto px-6 font-black shadow-lg shadow-success/20 transition-all active:scale-95">
                         تأكيد الدفع
                       </Button>
                     )}
