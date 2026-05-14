@@ -317,6 +317,9 @@ const Index = () => {
                     <span dir="ltr">+20 103 585 1931</span>
                   </a>
                 </li>
+                <li className="flex items-center gap-2">
+                   <span>القاهرة - مصر</span>
+                </li>
               </ul>
             </div>
           </div>
@@ -325,6 +328,7 @@ const Index = () => {
             <div className="flex items-center gap-4">
               <Link to="/terms" className="hover:text-foreground transition">الشروط والأحكام</Link>
               <Link to="/privacy" className="hover:text-foreground transition">سياسة الخصوصية</Link>
+              <Link to="/refund" className="hover:text-foreground transition">سياسة الاسترجاع والإلغاء</Link>
             </div>
             <div>صُنع بـ ❤️ في مصر</div>
           </div>
